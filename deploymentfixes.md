@@ -26,14 +26,9 @@ const [invalidSymbols, setInvalidSymbols] = useState<InvalidItem[]>([]);
 
 ### 5. Missing Landing Page (404 Error)
 **Error**: User reported `404 This page could not be found` on root URL. Confirmed `frontend/app/page.tsx` was missing.
-**Resolution**: Created `frontend/app/page.tsx` with a redirect to `/stocks` to ensure users land on a valid page.
-```typescript
-import { redirect } from 'next/navigation';
-export default function Home() {
-  redirect('/stocks');
-}
-```
+**Resolution**: Implemented a comprehensive Landing Page (`frontend/app/page.tsx`) with a hero section and feature navigation (Screener, Portfolio, Debt Optimizer), replacing the temporary redirect solution.
 
 ## Next Steps
 - Run `npm run build` to confirm all clear. (COMPLETED - SUCCESS)
 - Commit changes. (COMPLETED)
+
