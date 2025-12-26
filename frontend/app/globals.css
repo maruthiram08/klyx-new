@@ -8,13 +8,14 @@
 }
 
 @theme inline {
+  --color-background: var(--background);
   --color-foreground: var(--foreground);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
 
   --color-bullish: #10b981;
   --color-bearish: #ef4444;
-  --color-neutral: #f59e0b;
+  /* Removed incorrect neutral override */
   --color-dark: #18181b;
 }
 

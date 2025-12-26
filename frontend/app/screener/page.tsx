@@ -124,9 +124,9 @@ export default function ScreenerPage() {
   };
 
   return (
-    <div className="min-h-screen bg-neutral-50">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
       {/* Header */}
-      <div className="bg-white border-b border-neutral-200">
+      <div className="bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800">
         <Container>
           <div className="py-12">
             <div className="flex items-center justify-between">
@@ -135,11 +135,11 @@ export default function ScreenerPage() {
                   <div className="w-12 h-12 rounded-2xl bg-[#ccf32f] flex items-center justify-center">
                     <Filter size={24} className="text-black" />
                   </div>
-                  <Typography variant="h1" className="text-4xl font-bold">
+                  <Typography variant="h1" className="text-4xl font-bold text-neutral-900 dark:text-white">
                     Stock Screener
                   </Typography>
                 </div>
-                <Typography variant="body" className="text-neutral-600 text-lg">
+                <Typography variant="body" className="text-neutral-600 dark:text-neutral-400 text-lg">
                   Filter and discover stocks using powerful preset strategies or custom criteria
                 </Typography>
               </div>
@@ -175,10 +175,10 @@ export default function ScreenerPage() {
           <div className="mb-12">
             <div className="flex items-center justify-between mb-6">
               <div>
-                <Typography variant="h2" className="text-2xl font-bold mb-2">
+                <Typography variant="h2" className="text-2xl font-bold mb-2 text-neutral-900 dark:text-white">
                   Preset Strategies
                 </Typography>
-                <Typography variant="body" className="text-neutral-600">
+                <Typography variant="body" className="text-neutral-600 dark:text-neutral-400">
                   Choose from professionally crafted screening strategies
                 </Typography>
               </div>
@@ -191,19 +191,19 @@ export default function ScreenerPage() {
                   onClick={() => applyPreset(preset.id)}
                   disabled={loading}
                   className={`
-                    group relative bg-white rounded-2xl p-6 border-2 transition-all duration-300 text-left
+                    group relative bg-white dark:bg-neutral-900 rounded-2xl p-6 border-2 transition-all duration-300 text-left
                     ${selectedPreset === preset.id
-                      ? 'border-[#ccf32f] bg-[#ccf32f]/5'
-                      : 'border-neutral-200 hover:border-neutral-300'
+                      ? 'border-[#ccf32f] bg-[#ccf32f]/5 dark:bg-[#ccf32f]/10'
+                      : 'border-neutral-200 dark:border-neutral-800 hover:border-neutral-300 dark:hover:border-neutral-700'
                     }
                     ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-lg'}
                   `}
                 >
                   <div className="text-3xl mb-3">{getPresetIcon(preset.id)}</div>
-                  <Typography variant="h4" className="text-lg font-bold mb-2">
+                  <Typography variant="h4" className="text-lg font-bold mb-2 text-neutral-900 dark:text-white">
                     {preset.name}
                   </Typography>
-                  <Typography variant="caption" className="text-neutral-600 text-sm mb-3 line-clamp-2">
+                  <Typography variant="caption" className="text-neutral-600 dark:text-neutral-400 text-sm mb-3 line-clamp-2">
                     {preset.description}
                   </Typography>
                   <Badge variant="neutral" className="text-xs">
