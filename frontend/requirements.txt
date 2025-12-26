@@ -5,6 +5,6 @@ flask-jwt-extended
 flask-sqlalchemy
 requests
 
-nsepython
+# nsepython (moved to worker)
 psycopg2-binary
 gunicorn

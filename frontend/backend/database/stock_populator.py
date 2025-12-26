@@ -51,8 +51,11 @@ class StockListFetcher:
                 logger.info(f"Fetched {len(stocks)} NSE stocks via nsepython")
                 return stocks
             except ImportError:
-                logger.warning("nsepython not available, using fallback")
-
+                # This is expected on Vercel environment where we want to save space
+                logger.info("nsepython not installed (Vercel optimization). Using fallback/worker mode.")
+                # We can return the fallback list or an empty list if we want to force worker usage
+                pass 
+                
         except Exception as e:
             logger.error(f"Error fetching NSE list: {e}")
 
