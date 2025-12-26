@@ -6,7 +6,6 @@ import { Container } from '../../components/ui/Container';
 import { Typography } from '../../components/ui/Typography';
 import { Badge } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
-import Header from '../../components/Header';
 import StockCard from '../../components/StockCard';
 import { Filter, TrendingUp, Download, RefreshCw, Sparkles } from 'lucide-react';
 
@@ -125,217 +124,212 @@ export default function ScreenerPage() {
   };
 
   return (
-    <div className="flex flex-col min-h-screen bg-neutral-50">
-      <Header />
-
-      {/* Page Content */}
-      <div className="flex-1">
-        {/* Header Section */}
-        <div className="bg-white border-b border-neutral-200">
-          <Container>
-            <div className="py-12">
-              <div className="flex items-center justify-between">
-                <div>
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="w-12 h-12 rounded-2xl bg-[#ccf32f] flex items-center justify-center">
-                      <Filter size={24} className="text-black" />
-                    </div>
-                    <Typography variant="h1" className="text-4xl font-bold">
-                      Stock Screener
-                    </Typography>
-                  </div>
-                  <Typography variant="body" className="text-neutral-600 text-lg">
-                    Filter and discover stocks using powerful preset strategies or custom criteria
-                  </Typography>
-                </div>
-
-                {results.length > 0 && (
-                  <div className="flex gap-3">
-                    <Button
-                      variant="secondary"
-                      onClick={exportResults}
-                      className="flex items-center gap-2"
-                    >
-                      <Download size={16} />
-                      Export CSV
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      onClick={clearResults}
-                      className="flex items-center gap-2"
-                    >
-                      <RefreshCw size={16} />
-                      Clear
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </div>
-          </Container>
-        </div>
-
+    <div className="min-h-screen bg-neutral-50">
+      {/* Header */}
+      <div className="bg-white border-b border-neutral-200">
         <Container>
           <div className="py-12">
-            {/* Preset Strategies */}
-            <div className="mb-12">
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <Typography variant="h2" className="text-2xl font-bold mb-2">
-                    Preset Strategies
-                  </Typography>
-                  <Typography variant="body" className="text-neutral-600">
-                    Choose from professionally crafted screening strategies
+            <div className="flex items-center justify-between">
+              <div>
+                <div className="flex items-center gap-3 mb-3">
+                  <div className="w-12 h-12 rounded-2xl bg-[#ccf32f] flex items-center justify-center">
+                    <Filter size={24} className="text-black" />
+                  </div>
+                  <Typography variant="h1" className="text-4xl font-bold">
+                    Stock Screener
                   </Typography>
                 </div>
+                <Typography variant="body" className="text-neutral-600 text-lg">
+                  Filter and discover stocks using powerful preset strategies or custom criteria
+                </Typography>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                {presets.map((preset) => (
-                  <button
-                    key={preset.id}
-                    onClick={() => applyPreset(preset.id)}
-                    disabled={loading}
-                    className={`
+              {results.length > 0 && (
+                <div className="flex gap-3">
+                  <Button
+                    variant="secondary"
+                    onClick={exportResults}
+                    className="flex items-center gap-2"
+                  >
+                    <Download size={16} />
+                    Export CSV
+                  </Button>
+                  <Button
+                    variant="secondary"
+                    onClick={clearResults}
+                    className="flex items-center gap-2"
+                  >
+                    <RefreshCw size={16} />
+                    Clear
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </Container>
+      </div>
+
+      <Container>
+        <div className="py-12">
+          {/* Preset Strategies */}
+          <div className="mb-12">
+            <div className="flex items-center justify-between mb-6">
+              <div>
+                <Typography variant="h2" className="text-2xl font-bold mb-2">
+                  Preset Strategies
+                </Typography>
+                <Typography variant="body" className="text-neutral-600">
+                  Choose from professionally crafted screening strategies
+                </Typography>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+              {presets.map((preset) => (
+                <button
+                  key={preset.id}
+                  onClick={() => applyPreset(preset.id)}
+                  disabled={loading}
+                  className={`
                     group relative bg-white rounded-2xl p-6 border-2 transition-all duration-300 text-left
                     ${selectedPreset === preset.id
-                        ? 'border-[#ccf32f] bg-[#ccf32f]/5'
-                        : 'border-neutral-200 hover:border-neutral-300'
-                      }
+                      ? 'border-[#ccf32f] bg-[#ccf32f]/5'
+                      : 'border-neutral-200 hover:border-neutral-300'
+                    }
                     ${loading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:shadow-lg'}
                   `}
-                  >
-                    <div className="text-3xl mb-3">{getPresetIcon(preset.id)}</div>
-                    <Typography variant="h4" className="text-lg font-bold mb-2">
-                      {preset.name}
-                    </Typography>
-                    <Typography variant="caption" className="text-neutral-600 text-sm mb-3 line-clamp-2">
-                      {preset.description}
-                    </Typography>
-                    <Badge variant="neutral" className="text-xs">
-                      {preset.filter_count} filters
-                    </Badge>
+                >
+                  <div className="text-3xl mb-3">{getPresetIcon(preset.id)}</div>
+                  <Typography variant="h4" className="text-lg font-bold mb-2">
+                    {preset.name}
+                  </Typography>
+                  <Typography variant="caption" className="text-neutral-600 text-sm mb-3 line-clamp-2">
+                    {preset.description}
+                  </Typography>
+                  <Badge variant="neutral" className="text-xs">
+                    {preset.filter_count} filters
+                  </Badge>
 
-                    {selectedPreset === preset.id && (
-                      <div className="absolute top-4 right-4">
-                        <Sparkles size={20} className="text-[#ccf32f]" />
-                      </div>
-                    )}
-                  </button>
+                  {selectedPreset === preset.id && (
+                    <div className="absolute top-4 right-4">
+                      <Sparkles size={20} className="text-[#ccf32f]" />
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Results Section */}
+          {metadata && (
+            <div className="mb-8">
+              <div className="bg-white rounded-2xl p-6 border border-neutral-200">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Typography variant="h3" className="text-xl font-bold mb-1">
+                      {metadata.preset_name || 'Screening Results'}
+                    </Typography>
+                    <Typography variant="caption" className="text-neutral-600">
+                      {metadata.description}
+                    </Typography>
+                  </div>
+                  <div className="text-right">
+                    <div className="text-3xl font-bold text-[#ccf32f]">
+                      {metadata.total_matches}
+                    </div>
+                    <Typography variant="caption" className="text-neutral-500">
+                      stocks matched ({metadata.match_rate})
+                    </Typography>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Loading State */}
+          {loading && (
+            <div className="text-center py-16">
+              <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-neutral-200 border-t-[#ccf32f] mb-4"></div>
+              <Typography variant="body" className="text-neutral-600">
+                Screening stocks...
+              </Typography>
+            </div>
+          )}
+
+          {/* Results Grid */}
+          {!loading && results.length > 0 && (
+            <div>
+              <div className="flex items-center justify-between mb-6">
+                <Typography variant="h3" className="text-xl font-bold">
+                  Matched Stocks
+                </Typography>
+                <Typography variant="caption" className="text-neutral-500">
+                  {results.length} results
+                </Typography>
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {results.map((stock, idx) => (
+                  <StockCard
+                    key={idx}
+                    stock={stock}
+                    onClick={setSelectedStock}
+                  />
                 ))}
               </div>
             </div>
+          )}
 
-            {/* Results Section */}
-            {metadata && (
-              <div className="mb-8">
-                <div className="bg-white rounded-2xl p-6 border border-neutral-200">
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Typography variant="h3" className="text-xl font-bold mb-1">
-                        {metadata.preset_name || 'Screening Results'}
-                      </Typography>
-                      <Typography variant="caption" className="text-neutral-600">
-                        {metadata.description}
-                      </Typography>
-                    </div>
-                    <div className="text-right">
-                      <div className="text-3xl font-bold text-[#ccf32f]">
-                        {metadata.total_matches}
-                      </div>
-                      <Typography variant="caption" className="text-neutral-500">
-                        stocks matched ({metadata.match_rate})
-                      </Typography>
-                    </div>
-                  </div>
-                </div>
+          {/* Empty State */}
+          {!loading && !results.length && !metadata && (
+            <div className="text-center py-16">
+              <div className="w-24 h-24 rounded-full bg-neutral-100 flex items-center justify-center mx-auto mb-4">
+                <Filter size={40} className="text-neutral-400" />
               </div>
-            )}
-
-            {/* Loading State */}
-            {loading && (
-              <div className="text-center py-16">
-                <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-neutral-200 border-t-[#ccf32f] mb-4"></div>
-                <Typography variant="body" className="text-neutral-600">
-                  Screening stocks...
-                </Typography>
-              </div>
-            )}
-
-            {/* Results Grid */}
-            {!loading && results.length > 0 && (
-              <div>
-                <div className="flex items-center justify-between mb-6">
-                  <Typography variant="h3" className="text-xl font-bold">
-                    Matched Stocks
-                  </Typography>
-                  <Typography variant="caption" className="text-neutral-500">
-                    {results.length} results
-                  </Typography>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                  {results.map((stock, idx) => (
-                    <StockCard
-                      key={idx}
-                      stock={stock}
-                      onClick={setSelectedStock}
-                    />
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* Empty State */}
-            {!loading && !results.length && !metadata && (
-              <div className="text-center py-16">
-                <div className="w-24 h-24 rounded-full bg-neutral-100 flex items-center justify-center mx-auto mb-4">
-                  <Filter size={40} className="text-neutral-400" />
-                </div>
-                <Typography variant="h3" className="text-xl font-bold mb-2">
-                  Select a Preset Strategy
-                </Typography>
-                <Typography variant="body" className="text-neutral-600">
-                  Choose from the preset strategies above to start screening stocks
-                </Typography>
-              </div>
-            )}
-
-            {/* No Results */}
-            {!loading && results.length === 0 && metadata && (
-              <div className="text-center py-16">
-                <Typography variant="h3" className="text-xl font-bold mb-2">
-                  No stocks matched the criteria
-                </Typography>
-                <Typography variant="body" className="text-neutral-600">
-                  Try selecting a different preset or adjusting your filters
-                </Typography>
-              </div>
-            )}
-          </div>
-        </Container>
-
-        {/* Stock Details Modal (if needed) */}
-        {selectedStock && (
-          <div
-            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
-            onClick={() => setSelectedStock(null)}
-          >
-            <div
-              className="bg-white rounded-3xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {/* Stock details component here */}
-              <Typography variant="h2" className="text-2xl font-bold mb-4">
-                {selectedStock['Stock Name']}
+              <Typography variant="h3" className="text-xl font-bold mb-2">
+                Select a Preset Strategy
               </Typography>
-              {/* Add more stock details as needed */}
-              <Button onClick={() => setSelectedStock(null)} className="mt-6">
-                Close
-              </Button>
+              <Typography variant="body" className="text-neutral-600">
+                Choose from the preset strategies above to start screening stocks
+              </Typography>
             </div>
+          )}
+
+          {/* No Results */}
+          {!loading && results.length === 0 && metadata && (
+            <div className="text-center py-16">
+              <Typography variant="h3" className="text-xl font-bold mb-2">
+                No stocks matched the criteria
+              </Typography>
+              <Typography variant="body" className="text-neutral-600">
+                Try selecting a different preset or adjusting your filters
+              </Typography>
+            </div>
+          )}
+        </div>
+      </Container>
+
+      {/* Stock Details Modal (if needed) */}
+      {selectedStock && (
+        <div
+          className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          onClick={() => setSelectedStock(null)}
+        >
+          <div
+            className="bg-white rounded-3xl p-8 max-w-4xl w-full max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Stock details component here */}
+            <Typography variant="h2" className="text-2xl font-bold mb-4">
+              {selectedStock['Stock Name']}
+            </Typography>
+            {/* Add more stock details as needed */}
+            <Button onClick={() => setSelectedStock(null)} className="mt-6">
+              Close
+            </Button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }

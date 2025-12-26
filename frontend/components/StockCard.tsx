@@ -12,17 +12,14 @@ interface StockCardProps {
 
 const StockCard: React.FC<StockCardProps> = ({ stock, onClick }) => {
   // --- Logic Utilities ---
-  const hasChange = stock["Day change %"] !== null && stock["Day change %"] !== undefined;
-  const change = hasChange ? Number(stock["Day change %"]) : 0;
+  const change = Number(stock["Day change %"] || 0);
   const isPositive = change >= 0;
 
-  const price = (stock["Current Price"] !== null && stock["Current Price"] !== undefined)
-    ? Number(stock["Current Price"]).toLocaleString("en-IN", {
-      style: "currency",
-      currency: "INR",
-      maximumFractionDigits: 2,
-    })
-    : "₹-";
+  const price = Number(stock["Current Price"]).toLocaleString("en-IN", {
+    style: "currency",
+    currency: "INR",
+    maximumFractionDigits: 0,
+  });
   const score = Math.round(Number(stock["Trendlyne Momentum Score"] || 0));
 
   // Refined Score Color Logic
@@ -80,14 +77,12 @@ const StockCard: React.FC<StockCardProps> = ({ stock, onClick }) => {
         <div
           className={`flex items-center gap-1.5 text-sm font-medium ${isPositive ? "text-emerald-600" : "text-rose-600"}`}
         >
-          {hasChange ? (
-            <>
-              {isPositive ? <ArrowUpRight size={16} /> : <ArrowDownRight size={16} />}
-              <span>{Math.abs(change).toFixed(2)}%</span>
-            </>
+          {isPositive ? (
+            <ArrowUpRight size={16} />
           ) : (
-            <span className="text-neutral-400">-</span>
+            <ArrowDownRight size={16} />
           )}
+          <span>{Math.abs(change).toFixed(2)}%</span>
         </div>
       </div>
 

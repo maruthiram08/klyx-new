@@ -40,18 +40,12 @@ class StockListFetcher:
             try:
                 from nsepython import nse_eq_symbols
 
-                logger.info("Fetching authentic NSE symbol list via nsepython...")
                 symbols = nse_eq_symbols()
 
                 stocks = []
-                # Fetch ALL stocks (was previously limited to 100)
-                for symbol in symbols:
+                for symbol in symbols[:100]:  # Start with top 100 for testing
                     stocks.append(
-                        {
-                            "name": symbol,  # nse_eq_symbols only gives code, so use code as name initially
-                            "nse_code": symbol,
-                            "exchange": "NSE"
-                        }
+                        {"name": symbol, "nse_code": symbol, "exchange": "NSE"}
                     )
 
                 logger.info(f"Fetched {len(stocks)} NSE stocks via nsepython")
@@ -412,103 +406,8 @@ class StockDataPopulator:
 
         return {"enriched": enriched, "failed": failed, "total": len(stocks_to_enrich)}
 
-    def update_prices(self, max_stocks: int = 100) -> Dict:
-        """
-        Fast update of ONLY price and change % for top stocks.
-        Used for intraday updates.
-        """
-        logger.info(f"⚡ Starting fast price update for top {max_stocks} stocks...")
-        
-        # Get top stocks by market cap (most viewed)
-        query = f"""
-            SELECT id, nse_code 
-            FROM stocks 
-            ORDER BY market_cap DESC NULLS LAST
-            LIMIT {max_stocks}
-        """
-        stocks = self.db.execute_query(query)
-        
-        updated = 0
-        failed = 0
-        
-        for stock in stocks:
-            try:
-                # Use multi-source but request minimalistic data if possible, 
-                # or just use the fetcher and extract only price.
-                # Since multi_source_service.fetch_stock_data fetches everything by default loop,
-                # we might need a lighter method or just extract what we need.
-                # For now, we use the existing fetch but it might be slightly engaging.
-                # Optimization: In future, add 'light=True' to fetcher.
-                
-                data, quality = multi_source_service.fetch_stock_data(
-                    stock["nse_code"],
-                    required_fields=["currentPrice", "dayChange"] # We mainly care about these
-                )
-
-                if data and "currentPrice" in data:
-                    # Update ONLY price fields
-                    self.db.execute_query(
-                        """UPDATE stocks SET 
-                           current_price = ?, 
-                           day_change_pct = ?,
-                           last_updated = datetime('now')
-                           WHERE id = ?""",
-                        (data.get("currentPrice"), data.get("dayChange"), stock["id"])
-                    )
-                    updated += 1
-                else:
-                    failed += 1
-                    
-            except Exception as e:
-                logger.error(f"Failed price update for {stock['nse_code']}: {e}")
-                failed += 1
-                
-        return {"updated": updated, "failed": failed}
-
     def _update_stock_data(self, stock_id: int, data: Dict, quality: Dict):
         """Update stock with enriched data"""
-        try:
-            # Calculate technical momentum score if not present
-            from services.momentum_calculator import MomentumCalculator
-            
-            # Ensure we have some technicals to calc score
-            # If fetcher didn't provide SMAs, we might default.
-            # nsepython fetcher doesn't provide SMA currently, so score might be RSI based only.
-            momentum_score = MomentumCalculator.calculate(data)
-            
-            self.db.execute_query(
-                """
-                UPDATE stocks SET
-                current_price = ?,
-                day_change_pct = ?,
-                market_cap = ?,
-                pe_ttm = ?,
-                roe_annual_pct = ?,
-                data_quality_score = ?,
-                data_sources = ?,
-                momentum_score = ?,
-                last_updated = datetime('now')
-                WHERE id = ?
-                """,
-                (
-                    data.get("currentPrice"),
-                    data.get("dayChange"),
-                    data.get("marketCap"),
-                    data.get("pe_ratio"),
-                    data.get("roe"),
-                    quality.get("score", 0),
-                    ",".join(quality.get("sources_used", [])),
-                    momentum_score,
-                    stock_id
-                )
-            )
-            # Note: The query above is simplified. I need to make sure I don't break existing update logic.
-            # I should verify the existing _update_stock_data method content first to be safe.
-            # I will assume standard update logic and just add momentum_score.
-            # Actually, looking at previous views, `_update_stock_data` was fairly complex or I haven't viewed the FULL method recently.
-            # I'll view it first to be safe.
-        except Exception as e:
-            logger.error(f"Failed to update stock {stock_id}: {e}")
 
         # Calculate derived ratios
         debt_to_equity = None

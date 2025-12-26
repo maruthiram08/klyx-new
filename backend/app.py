@@ -2,7 +2,6 @@ import json
 import os
 import sys
 import threading
-from datetime import timedelta
 
 import numpy as np
 import pandas as pd
@@ -18,47 +17,12 @@ import clean_data
 import enrich_data
 import generate_insights
 
-# [NEW] Import auth
-from auth import auth_bp, bcrypt, jwt
-
-# Import debt optimizer routes
-from debt_optimizer_routes import debt_optimizer_bp
-from models import db
-
-# Import portfolio routes
-from portfolio_routes import portfolio_bp
-
-# [NEW] Import Scheduler
-from scheduler import init_scheduler
-
 app = Flask(__name__)
-
-# Configuration
-app.config["SECRET_KEY"] = os.environ.get(
-    "SECRET_KEY", "dev-secret-key-change-in-production"
-)
-app.config["JWT_SECRET_KEY"] = os.environ.get(
-    "JWT_SECRET_KEY", "jwt-secret-key-change-in-production"
-)
-app.config["JWT_ACCESS_TOKEN_EXPIRES"] = timedelta(hours=1)
-app.config["JWT_REFRESH_TOKEN_EXPIRES"] = timedelta(days=30)
-app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///klyx.db"
-app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
-
-# Initialize extensions
-db.init_app(app)
-bcrypt.init_app(app)
-jwt.init_app(app)
-
-# Initialize Scheduler
-scheduler = init_scheduler(app)
-
 # Enable CORS for all routes (Next.js is on localhost:3000)
 # Enable CORS for Next.js frontend
 CORS(
     app,
     resources={r"/*": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000"]}},
-    supports_credentials=True,
 )
 
 # Path to datasource (relative to backend/)
@@ -66,18 +30,6 @@ app.config["UPLOAD_FOLDER"] = os.path.join(
     os.path.dirname(os.path.abspath(__file__)), "datasource"
 )
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
-
-# Register authentication routes
-app.register_blueprint(auth_bp, url_prefix="/api/auth")
-print("✓ Authentication routes registered")
-
-# Register portfolio routes
-app.register_blueprint(portfolio_bp, url_prefix="/api")
-print("✓ Portfolio routes registered")
-
-# Register debt optimizer routes
-app.register_blueprint(debt_optimizer_bp, url_prefix="/api")
-print("✓ Debt Optimizer routes registered")
 
 # Register database management routes
 try:
@@ -87,11 +39,6 @@ try:
     print("✓ Database routes registered")
 except Exception as e:
     print(f"⚠ Database routes not available: {e}")
-
-# Create database tables
-with app.app_context():
-    db.create_all()
-    print("✓ Database tables created")
 
 
 @app.route("/api/upload", methods=["POST"])
@@ -496,6 +443,54 @@ def get_screener_fields():
     """Get all available fields for screening with statistics"""
     try:
         from services.screener_service import create_screener
+
+        screener = create_screener("nifty50_final_analysis.xlsx")
+
+        if not screener:
+            return jsonify(
+                {
+                    "status": "error",
+                    "message": "No data available. Run processing first.",
+                }
+            ), 404
+
+        fields = screener.get_available_fields()
+
+        return jsonify({"status": "success", "fields": fields})
+
+    except Exception as e:
+        import traceback
+
+        traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/screener/field/<path:field_name>/stats", methods=["GET"])
+def get_field_stats(field_name):
+    """Get statistics for a specific field"""
+    try:
+        from services.screener_service import create_screener
+
+        screener = create_screener("nifty50_final_analysis.xlsx")
+
+        if not screener:
+            return jsonify({"status": "error", "message": "No data available"}), 404
+
+        stats = screener.get_field_stats(field_name)
+
+        if not stats:
+            return jsonify(
+                {"status": "error", "message": f"Field '{field_name}' not found"}
+            ), 404
+
+        return jsonify({"status": "success", "stats": stats})
+
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+if __name__ == "__main__":
+    app.run(debug=True, port=5001)
 
         screener = create_screener("nifty50_final_analysis.xlsx")
 

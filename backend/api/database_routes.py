@@ -11,7 +11,6 @@ These endpoints allow:
 
 import os
 import sys
-from datetime import datetime
 
 from flask import Blueprint, jsonify, request
 
@@ -143,14 +142,12 @@ def list_stocks():
         - offset: Offset for pagination (default: 0)
         - sector: Filter by sector
         - min_quality: Minimum quality score (default: 30)
-        - search: Search by NSE code or stock name
     """
     try:
         limit = int(request.args.get("limit", 50))
         offset = int(request.args.get("offset", 0))
         sector = request.args.get("sector")
         min_quality = int(request.args.get("min_quality", 30))
-        search = request.args.get("search")
 
         # Build query
         where_clauses = [f"data_quality_score >= {min_quality}"]
@@ -159,11 +156,6 @@ def list_stocks():
         if sector:
             where_clauses.append("sector_name = ?")
             params.append(sector)
-
-        if search:
-            where_clauses.append("(nse_code = ? OR stock_name LIKE ?)")
-            params.append(search)
-            params.append(f"%{search}%")
 
         where_clause = " AND ".join(where_clauses)
 
@@ -217,73 +209,6 @@ def get_stock_details(nse_code: str):
             return jsonify(
                 {"status": "error", "message": f"Stock {nse_code} not found"}
             ), 404
-
-        # Lazy Loading Logic: Check if data is stale (> 15 mins) during market hours
-        should_update = False
-        last_updated_str = stock.get("last_updated")
-
-        if not last_updated_str:
-            should_update = True
-        else:
-            try:
-                # Convert string to datetime
-                last_updated = datetime.strptime(last_updated_str, "%Y-%m-%d %H:%M:%S")
-
-                # Check if older than 15 mins
-                if (datetime.now() - last_updated).total_seconds() > 900:  # 15 mins
-                    should_update = True
-            except:
-                should_update = True  # Parse error, assume stale
-
-        if should_update:
-            # Trigger quick update logic
-            try:
-                from database.stock_populator import StockDataPopulator
-                from services.multi_source_data_service import multi_source_service
-
-                logger.info(f"🔄 Lazy loading: Fetching fresh data for {nse_code}...")
-
-                # Fetch fresh data
-                data, quality = multi_source_service.fetch_stock_data(
-                    nse_code,
-                    required_fields=[
-                        "currentPrice",
-                        "dayChange",
-                        "marketCap",
-                        "pe_ratio",
-                    ],
-                )
-
-                if data and quality["score"] > 0:
-                    # Update DB
-                    populator = StockDataPopulator()
-                    # We reuse _update_stock_data but minimal fields might wipe others if not careful?
-                    # valid point. _update_stock_data expects full dictionary or might overwrite with None.
-                    # Looking at _update_stock_data implementation:
-                    # It uses data.get(...) so if keys are missing it inserts None.
-                    # This is risky if we only fetch partial data.
-                    # We should probably use a safer update or fetch full data.
-                    # Let's fetch FULL data for the lazy load to be safe and comprehensive.
-
-                    # Re-fetch full data actually (default behavior of fetch_stock_data without required_fields)
-                    full_data, full_quality = multi_source_service.fetch_stock_data(
-                        nse_code
-                    )
-
-                    if full_data and full_quality["score"] > 0:
-                        populator._update_stock_data(
-                            stock["id"], full_data, full_quality
-                        )
-
-                        # Re-fetch stock from DB to return updated version
-                        stock = db_config.execute_query(
-                            query, (nse_code,), fetch_one=True
-                        )
-                        logger.info(f"✅ Lazy load success for {nse_code}")
-
-            except Exception as lazy_e:
-                logger.error(f"Lazy load failed for {nse_code}: {lazy_e}")
-                # We continue to return old data explicitly if update fails
 
         return jsonify({"status": "success", "data": stock})
 
@@ -339,6 +264,23 @@ def refresh_database():
 
 @db_routes.route("/sectors", methods=["GET"])
 def get_sectors():
+    """Get list of all sectors with stock counts"""
+    try:
+        query = """
+            SELECT sector_name, COUNT(*) as stock_count
+            FROM stocks
+            WHERE sector_name IS NOT NULL
+            GROUP BY sector_name
+            ORDER BY stock_count DESC
+        """
+
+        sectors = db_config.execute_query(query)
+
+        return jsonify({"status": "success", "data": sectors})
+
+    except Exception as e:
+        logger.error(f"Get sectors error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
     """Get list of all sectors with stock counts"""
     try:
         query = """
