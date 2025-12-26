@@ -18,7 +18,11 @@ import logging
 from datetime import datetime
 from typing import Dict, List, Optional
 
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    # pandas is not available on Vercel API (optimization)
+    pd = None
 from database.db_config import db_config
 from services.multi_source_data_service import multi_source_service
 
