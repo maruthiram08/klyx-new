@@ -2,8 +2,8 @@ services:
   - type: worker
     name: klyx-worker
     env: python
-    buildCommand: pip install -r backend/requirements.txt
-    startCommand: python backend/worker_app.py
+    buildCommand: pip install -r frontend/backend/requirements.txt
+    startCommand: python frontend/backend/worker_app.py
     envVars:
       - key: DATABASE_URL
         sync: false
