@@ -2,7 +2,8 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-const API_URL = "http://127.0.0.1:5001/api/auth";
+// Use relative path for API calls - this works with Vercel rewrites and Next.js proxy
+const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api/auth";
 
 interface User {
   id: string;
