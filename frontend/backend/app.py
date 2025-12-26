@@ -37,6 +37,7 @@ try:
     from auth import auth_bp, bcrypt, jwt
     from api.database_routes import db_routes
     from api.screener_routes import screener_bp
+    from portfolio_routes import portfolio_bp
 
     # Initialize extensions
     app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("POSTGRES_URL") or "sqlite:///local.db"
@@ -51,6 +52,7 @@ try:
     app.register_blueprint(db_routes)
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
     app.register_blueprint(screener_bp, url_prefix="/api/screener")
+    app.register_blueprint(portfolio_bp, url_prefix="/api/database")
     
     # Create tables if they don't exist (for fresh deployments)
     with app.app_context():
@@ -508,53 +510,6 @@ def get_field_stats(field_name):
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
-
-if __name__ == "__main__":
-    app.run(debug=True, port=5001)
-
-        screener = create_screener("nifty50_final_analysis.xlsx")
-
-        if not screener:
-            return jsonify(
-                {
-                    "status": "error",
-                    "message": "No data available. Run processing first.",
-                }
-            ), 404
-
-        fields = screener.get_available_fields()
-
-        return jsonify({"status": "success", "fields": fields})
-
-    except Exception as e:
-        import traceback
-
-        traceback.print_exc()
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-
-@app.route("/api/screener/field/<path:field_name>/stats", methods=["GET"])
-def get_field_stats(field_name):
-    """Get statistics for a specific field"""
-    try:
-        from services.screener_service import create_screener
-
-        screener = create_screener("nifty50_final_analysis.xlsx")
-
-        if not screener:
-            return jsonify({"status": "error", "message": "No data available"}), 404
-
-        stats = screener.get_field_stats(field_name)
-
-        if not stats:
-            return jsonify(
-                {"status": "error", "message": f"Field '{field_name}' not found"}
-            ), 404
-
-        return jsonify({"status": "success", "stats": stats})
-
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 if __name__ == "__main__":

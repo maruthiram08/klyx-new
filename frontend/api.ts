@@ -103,14 +103,46 @@ export const api = {
   },
 
   getPortfolio: async () => {
-    const res = await fetch(`${API_BASE}/database/portfolio`);
-    if (!res.ok) return { status: 'error', message: 'Failed to fetch portfolio' };
+    const res = await fetch(`${API_BASE}/database/portfolio`, {
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    // Handle 401/403 gracefully if needed, but for now strict check
+    if (res.status === 401) return { status: 'error', message: 'Unauthorized' };
+    return res.json();
+  },
+
+  addToPortfolio: async (stockName: string) => {
+    const res = await fetch(`${API_BASE}/database/portfolio/add`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({ stock_name: stockName })
+    });
+    return res.json();
+  },
+
+  removeFromPortfolio: async (stockName: string) => {
+    const res = await fetch(`${API_BASE}/database/portfolio/remove`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      },
+      body: JSON.stringify({ stock_name: stockName })
+    });
     return res.json();
   },
 
   clearPortfolio: async () => {
     const res = await fetch(`${API_BASE}/database/portfolio/clear`, {
-      method: 'POST'
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
     });
     return res.json();
   }

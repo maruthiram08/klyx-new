@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import Header from '../../components/Header';
 import { Stock } from '../../types';
 import { Container } from '../../components/ui/Container';
 import { Typography } from '../../components/ui/Typography';
