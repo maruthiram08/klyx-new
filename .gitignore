@@ -102,3 +102,4 @@ htmlcov/
 # Backup files
 *.bak
 *.backup
+.env*.local

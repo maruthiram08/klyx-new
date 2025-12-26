@@ -10,8 +10,27 @@ Usage:
 import os
 import sqlite3
 from datetime import datetime
-
 import psycopg2
+
+import math
+
+def clean_value(val):
+    # Handle timestamps
+    if val == 'CURRENT_DATETIME':
+        return datetime.now()
+    
+    # Handle floats
+    if isinstance(val, float):
+        if math.isinf(val) or math.isnan(val):
+            return None
+            
+    # Handle strings looking like numbers
+    if isinstance(val, str):
+        v_lower = val.lower()
+        if v_lower in ['inf', 'infinity', '-inf', '-infinity', 'nan']:
+            return None
+            
+    return val
 
 # Source databases (local SQLite)
 SQLITE_KLYX = "instance/klyx.db"
@@ -136,7 +155,15 @@ def migrate_stocks():
     # Migrate tables
     for table in ["stocks", "stock_metadata", "data_refresh_log"]:
         try:
-            rows = migrate_table(stocks_conn, pg_conn, table)
+            # Define transform for stocks table to fix corrupted values
+            transform_func = None
+            if table == 'stocks':
+                def clean_stock_row(row):
+                    # Clean every value in the row
+                    return tuple(clean_value(x) for x in row)
+                transform_func = clean_stock_row
+
+            rows = migrate_table(stocks_conn, pg_conn, table, transform=transform_func)
             total_rows += rows
         except Exception as e:
             print(f"  ✗ {table}: {str(e)}")
