@@ -68,7 +68,9 @@ export default function StockListPage() {
   const togglePortfolio = async (e: React.MouseEvent, stockName: string) => {
     e.stopPropagation(); // Prevent row click
     if (!user) {
-      alert("Please login to manage portfolio");
+      // Just log, or maybe redirect? For now, silence because alert is annoying.
+      console.warn("User not logged in, cannot toggle portfolio");
+      router.push('/login');
       return;
     }
 
@@ -87,7 +89,7 @@ export default function StockListPage() {
       }
     } catch (error) {
       console.error('Failed to update portfolio:', error);
-      alert('Failed to update portfolio');
+      // No alert to prevent blocking UI
     } finally {
       setLoadingPortfolio(null);
     }
@@ -212,25 +214,30 @@ export default function StockListPage() {
                           <td className="px-6 py-4 whitespace-nowrap text-right">
                             <div className="flex items-center justify-end gap-2">
                               {/* Portfolio Action Button */}
-                              <Button
-                                variant={isInPortfolio ? "secondary" : "primary"}
-                                size="sm"
+                              <button
                                 disabled={isProcessing}
                                 onClick={(e) => togglePortfolio(e, stockName)}
-                                className={`rounded-full w-8 h-8 p-0 ${isInPortfolio ? 'text-emerald-600 bg-emerald-50 hover:bg-rose-50 hover:text-rose-600 group/btn' : ''}`}
+                                className={`
+                                  flex items-center justify-center w-8 h-8 rounded-full transition-all duration-200
+                                  ${isInPortfolio
+                                    ? 'bg-emerald-100 text-emerald-600 hover:bg-rose-100 hover:text-rose-600'
+                                    : 'bg-neutral-100 text-neutral-400 hover:bg-[#ccf32f] hover:text-black hover:scale-110'
+                                  }
+                                  ${isProcessing ? 'cursor-wait opacity-70' : ''}
+                                `}
                                 title={isInPortfolio ? "Remove from Portfolio" : "Add to Portfolio"}
                               >
                                 {isProcessing ? (
                                   <Loader2 size={14} className="animate-spin" />
                                 ) : isInPortfolio ? (
                                   <>
-                                    <Check size={14} className="group-hover/btn:hidden" />
-                                    <Trash2 size={14} className="hidden group-hover/btn:block" />
+                                    <Check size={14} className="block hover:hidden" />
+                                    <Trash2 size={14} className="hidden hover:block" />
                                   </>
                                 ) : (
-                                  <Plus size={14} />
+                                  <Plus size={16} />
                                 )}
-                              </Button>
+                              </button>
 
                               <Button variant="ghost" size="sm" className="rounded-full w-8 h-8 p-0">
                                 <Eye size={16} className="text-neutral-400 group-hover:text-black" />
