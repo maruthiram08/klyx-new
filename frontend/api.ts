@@ -122,7 +122,9 @@ export const api = {
       },
       body: JSON.stringify({ stock_name: stockName })
     });
-    return res.json();
+    const data = await res.json();
+    if (!res.ok || data.status === 'error') throw new Error(data.message || 'Failed to add to portfolio');
+    return data;
   },
 
   removeFromPortfolio: async (stockName: string) => {
@@ -134,7 +136,9 @@ export const api = {
       },
       body: JSON.stringify({ stock_name: stockName })
     });
-    return res.json();
+    const data = await res.json();
+    if (!res.ok || data.status === 'error') throw new Error(data.message || 'Failed to remove from portfolio');
+    return data;
   },
 
   clearPortfolio: async () => {
@@ -144,7 +148,9 @@ export const api = {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     });
-    return res.json();
+    const data = await res.json();
+    if (!res.ok || data.status === 'error') throw new Error(data.message || 'Failed to clear portfolio');
+    return data;
   },
 
   migratePortfolio: async () => {
@@ -154,6 +160,8 @@ export const api = {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     });
-    return res.json();
+    const data = await res.json();
+    if (!res.ok || data.status === 'error') throw new Error(data.message || 'Failed to migrate portfolio');
+    return data;
   }
 };

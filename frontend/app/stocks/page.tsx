@@ -87,9 +87,9 @@ export default function StockListPage() {
         await api.addToPortfolio(stockName);
         setPortfolioStocks(prev => new Set(prev).add(stockName));
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error('Failed to update portfolio:', error);
-      // No alert to prevent blocking UI
+      alert(`Error: ${error.message}`);
     } finally {
       setLoadingPortfolio(null);
     }
