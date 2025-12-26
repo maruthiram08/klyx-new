@@ -8,12 +8,12 @@ const mapDatabaseToFrontend = (item: any): any => {
     "Stock Name": item.stock_name,
     "NSE Code": item.nse_code,
     "sector_name": item.sector_name,
-    "Current Price": item.current_price,
-    "Day change %": item.day_change_pct,
-    "Market Capitalization": item.market_cap,
-    "PE TTM Price to Earnings": item.pe_ttm,
-    "ROE Annual %": item.roe_annual_pct,
-    "Data Quality Score": item.data_quality_score,
+    "Current Price": item.current_price ? Number(item.current_price) : null,
+    "Day change %": item.day_change_pct ? Number(item.day_change_pct) : null,
+    "Market Capitalization": item.market_cap ? Number(item.market_cap) : null,
+    "PE TTM Price to Earnings": item.pe_ttm ? Number(item.pe_ttm) : null,
+    "ROE Annual %": item.roe_annual_pct ? Number(item.roe_annual_pct) : null,
+    "Data Quality Score": item.data_quality_score ? Number(item.data_quality_score) : 0,
     "Last Updated": item.last_updated,
     // Map other fields as needed for details page
     ...item // Spread original items as fallback for unmapped fields (like 'id')
