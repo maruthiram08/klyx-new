@@ -2,6 +2,35 @@
 -- Designed for NSE/BSE stock screening application
 
 -- Main stocks table with all fundamental and technical data
+CREATE TABLE IF NOT EXISTS users (
+    id VARCHAR(36) PRIMARY KEY,
+    email VARCHAR(120) UNIQUE NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS user_portfolio (
+    id SERIAL PRIMARY KEY,
+    user_id VARCHAR(36) REFERENCES users(id) ON DELETE CASCADE,
+    stock_name VARCHAR(255) NOT NULL,
+    added_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_user_stock UNIQUE(user_id, stock_name)
+);
+
+CREATE TABLE IF NOT EXISTS debt_scenarios (
+    id SERIAL PRIMARY KEY,
+    user_id VARCHAR(36) REFERENCES users(id) ON DELETE CASCADE,
+    name VARCHAR(255) NOT NULL,
+    debts TEXT NOT NULL, -- JSON string
+    monthly_budget DECIMAL(15, 2) NOT NULL,
+    is_current BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_user_scenario UNIQUE(user_id, name)
+);
+
 CREATE TABLE IF NOT EXISTS stocks (
     id SERIAL PRIMARY KEY,
 
@@ -188,5 +217,7 @@ END;
 $$ language 'plpgsql';
 
 -- Trigger for stock_metadata
+-- Trigger for stock_metadata
+DROP TRIGGER IF EXISTS update_stock_metadata_updated_at ON stock_metadata;
 CREATE TRIGGER update_stock_metadata_updated_at BEFORE UPDATE ON stock_metadata
 FOR EACH ROW EXECUTE FUNCTION update_updated_at_column();
