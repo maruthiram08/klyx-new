@@ -35,6 +35,21 @@ CORS(app, origins=allowed_origins, supports_credentials=True)
 # Initialize JWT
 jwt = JWTManager(app)
 
+# Initialize Database and Bcrypt (Critical for Auth)
+try:
+    from models import db, User
+    from auth import bcrypt
+    
+    # Database Config
+    app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("POSTGRES_URL")
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    
+    db.init_app(app)
+    bcrypt.init_app(app)
+    
+except ImportError as e:
+    print(f"Warning: Could not enable Database/Auth extensions: {e}")
+
 # Register blueprints
 try:
     from auth import auth_bp
