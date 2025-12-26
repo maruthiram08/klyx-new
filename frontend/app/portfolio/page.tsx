@@ -167,6 +167,20 @@ export default function Home() {
     }
   };
 
+  /* State for Fix DB Modal */
+  const [showFixDbConfirm, setShowFixDbConfirm] = useState(false);
+
+  const handleFixDb = async () => {
+    setShowFixDbConfirm(false);
+    try {
+      await api.migratePortfolio();
+      // No alert, just reload to reflect changes
+      window.location.reload();
+    } catch (e) {
+      console.error("Failed to repair database:", e);
+    }
+  };
+
   return (
     <div className="flex flex-col bg-[#F8FAFB] min-h-screen font-sans text-slate-900">
       <Header stockCount={stocks.length} />
@@ -202,17 +216,7 @@ export default function Home() {
               </button>
 
               <button
-                onClick={async () => {
-                  if (confirm("Fix Portfolio Database? This will reset your portfolio.")) {
-                    try {
-                      await api.migratePortfolio();
-                      alert("Database repaired. Please re-add stocks.");
-                      window.location.reload();
-                    } catch (e) {
-                      alert("Failed to repair database");
-                    }
-                  }
-                }}
+                onClick={() => setShowFixDbConfirm(true)}
                 className="p-2.5 rounded-full text-neutral-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
                 title="Fix Database Schema"
               >
@@ -288,6 +292,16 @@ export default function Home() {
         isDestructive={true}
         onConfirm={handleConfirmClear}
         onCancel={() => setShowClearConfirm(false)}
+      />
+
+      <ConfirmationModal
+        isOpen={showFixDbConfirm}
+        title="Fix Database Schema"
+        message="This will drop and recreate the portfolio database table. All your current portfolio data will be LOST. Use this only if you are experiencing issues adding stocks."
+        confirmLabel="Fix Database"
+        isDestructive={true}
+        onConfirm={handleFixDb}
+        onCancel={() => setShowFixDbConfirm(false)}
       />
     </div>
   );
