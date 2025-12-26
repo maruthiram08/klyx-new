@@ -18,7 +18,191 @@ from database.db_config import db_config
 logger = logging.getLogger(__name__)
 
 
+
+class ScreenerPresets:
+    """Pre-built screening strategies"""
+
+    @staticmethod
+    def value_investing() -> Dict:
+        """Value Investing Strategy - Undervalued stocks"""
+        return {
+            "name": "Value Investing",
+            "description": "Low P/E, High ROE, Strong fundamentals",
+            "filters": [
+                {"field": "PE TTM Price to Earnings", "operator": "lt", "value": 20},
+                {"field": "PE TTM Price to Earnings", "operator": "gt", "value": 0},
+                {"field": "ROE Annual %", "operator": "gte", "value": 15},
+                {
+                    "field": "Market Capitalization",
+                    "operator": "gt",
+                    "value": 10000000000,
+                },  # >1000 Cr
+                {"field": "Debt to Equity Ratio", "operator": "lt", "value": 1},
+                {"field": "Current Ratio", "operator": "gt", "value": 1.5},
+            ],
+            "sort": {"field": "PE TTM Price to Earnings", "order": "asc"},
+        }
+
+    @staticmethod
+    def growth_stocks() -> Dict:
+        """Growth Stock Strategy - High growth companies"""
+        return {
+            "name": "Growth Stocks",
+            "description": "High revenue growth, strong momentum",
+            "filters": [
+                {
+                    "field": "Revenue Growth Annual YoY %",
+                    "operator": "gte",
+                    "value": 20,
+                },
+                {
+                    "field": "Net Profit Annual YoY Growth %",
+                    "operator": "gte",
+                    "value": 15,
+                },
+                {"field": "ROE Annual %", "operator": "gte", "value": 18},
+                {
+                    "field": "Market Capitalization",
+                    "operator": "gt",
+                    "value": 5000000000,
+                },
+            ],
+            "sort": {"field": "Revenue Growth Annual YoY %", "order": "desc"},
+        }
+
+    @staticmethod
+    def momentum_trading() -> Dict:
+        """Momentum Strategy - Strong price momentum"""
+        return {
+            "name": "Momentum Trading",
+            "description": "Strong uptrend with positive momentum indicators",
+            "filters": [
+                {"field": "Month Change %", "operator": "gt", "value": 5},
+                {"field": "Qtr Change %", "operator": "gt", "value": 10},
+                {"field": "Day RSI", "operator": "between", "value": [40, 70]},
+                {"field": "Trendlyne Momentum Score", "operator": "gte", "value": 60},
+            ],
+            "sort": {"field": "Month Change %", "order": "desc"},
+        }
+
+    @staticmethod
+    def dividend_aristocrats() -> Dict:
+        """Dividend Strategy - High dividend yield"""
+        return {
+            "name": "Dividend Aristocrats",
+            "description": "High dividend yield with stable earnings",
+            "filters": [
+                {"field": "Dividend Yield Annual %", "operator": "gte", "value": 3},
+                {"field": "ROE Annual %", "operator": "gte", "value": 12},
+                {"field": "Debt to Equity Ratio", "operator": "lt", "value": 0.8},
+                {"field": "Current Ratio", "operator": "gt", "value": 1.5},
+                {
+                    "field": "Market Capitalization",
+                    "operator": "gt",
+                    "value": 10000000000,
+                },
+            ],
+            "sort": {"field": "Dividend Yield Annual %", "order": "desc"},
+        }
+
+    @staticmethod
+    def quality_stocks() -> Dict:
+        """Quality Strategy - High quality fundamentals"""
+        return {
+            "name": "Quality Stocks",
+            "description": "Strong fundamentals across all metrics",
+            "filters": [
+                {"field": "ROE Annual %", "operator": "gte", "value": 20},
+                {"field": "RoA Annual %", "operator": "gte", "value": 10},
+                {
+                    "field": "Operating Profit Margin Qtr %",
+                    "operator": "gte",
+                    "value": 15,
+                },
+                {"field": "Debt to Equity Ratio", "operator": "lt", "value": 0.5},
+                {"field": "Current Ratio", "operator": "gt", "value": 2},
+                {"field": "Promoter holding latest %", "operator": "gte", "value": 50},
+            ],
+            "sort": {"field": "ROE Annual %", "order": "desc"},
+        }
+
+    @staticmethod
+    def undervalued_growth() -> Dict:
+        """GARP Strategy - Growth at Reasonable Price"""
+        return {
+            "name": "Undervalued Growth (GARP)",
+            "description": "Growth stocks trading at reasonable valuations",
+            "filters": [
+                {
+                    "field": "Revenue Growth Annual YoY %",
+                    "operator": "gte",
+                    "value": 15,
+                },
+                {"field": "PE TTM Price to Earnings", "operator": "lt", "value": 25},
+                {"field": "PE TTM Price to Earnings", "operator": "gt", "value": 0},
+                {"field": "ROE Annual %", "operator": "gte", "value": 15},
+                {"field": "PEG TTM PE to Growth", "operator": "lt", "value": 1.5},
+            ],
+            "sort": {"field": "PEG TTM PE to Growth", "order": "asc"},
+        }
+
+    @staticmethod
+    def breakout_stocks() -> Dict:
+        """Breakout Strategy - Technical breakouts"""
+        return {
+            "name": "Breakout Stocks",
+            "description": "Stocks breaking out with strong technicals",
+            "filters": [
+                {"field": "Day RSI", "operator": "between", "value": [50, 75]},
+                {"field": "Day change %", "operator": "gt", "value": 2},
+                {"field": "Month Change %", "operator": "gt", "value": 8},
+                {"field": "Day ADX", "operator": "gt", "value": 25},
+                {
+                    "field": "Market Capitalization",
+                    "operator": "gt",
+                    "value": 5000000000,
+                },
+            ],
+            "sort": {"field": "Day change %", "order": "desc"},
+        }
+
+    @staticmethod
+    def low_volatility() -> Dict:
+        """Low Volatility Strategy - Stable stocks"""
+        return {
+            "name": "Low Volatility",
+            "description": "Low beta, stable price movement",
+            "filters": [
+                {"field": "Beta 1Year", "operator": "lt", "value": 0.8},
+                {"field": "ROE Annual %", "operator": "gte", "value": 12},
+                {"field": "Debt to Equity Ratio", "operator": "lt", "value": 0.7},
+                {
+                    "field": "Market Capitalization",
+                    "operator": "gt",
+                    "value": 10000000000,
+                },
+                {"field": "Dividend Yield Annual %", "operator": "gte", "value": 1.5},
+            ],
+            "sort": {"field": "Beta 1Year", "order": "asc"},
+        }
+
+    @staticmethod
+    def all_presets() -> Dict[str, Dict]:
+        """Get all preset strategies"""
+        return {
+            "value": ScreenerPresets.value_investing(),
+            "growth": ScreenerPresets.growth_stocks(),
+            "momentum": ScreenerPresets.momentum_trading(),
+            "dividend": ScreenerPresets.dividend_aristocrats(),
+            "quality": ScreenerPresets.quality_stocks(),
+            "garp": ScreenerPresets.undervalued_growth(),
+            "breakout": ScreenerPresets.breakout_stocks(),
+            "low_volatility": ScreenerPresets.low_volatility(),
+        }
+
+
 class DatabaseScreener:
+
     """
     Database-driven stock screener.
 
@@ -247,8 +431,7 @@ class DatabaseScreener:
 
     def apply_preset(self, preset_name: str) -> Dict:
         """Apply a preset screening strategy"""
-        from services.screener_service import ScreenerPresets
-
+        
         presets = ScreenerPresets.all_presets()
 
         if preset_name not in presets:

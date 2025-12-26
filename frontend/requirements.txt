@@ -3,11 +3,7 @@ flask-cors
 flask-bcrypt
 flask-jwt-extended
 flask-sqlalchemy
-pandas
-yfinance
-openpyxl
 requests
-beautifulsoup4
 
 nsepython
 psycopg2-binary
