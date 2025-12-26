@@ -21,7 +21,7 @@ class DatabaseConfig:
         self.is_production = os.getenv("VERCEL_ENV") == "production"
 
         # Vercel Postgres connection string
-        self.postgres_url = os.getenv("POSTGRES_URL")
+        self.postgres_url = os.getenv("POSTGRES_URL") or os.getenv("DATABASE_URL")
 
         # Local SQLite for development
         self.sqlite_path = os.path.join(os.path.dirname(__file__), "stocks.db")
