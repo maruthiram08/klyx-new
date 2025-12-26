@@ -1,0 +1,24 @@
+# Vercel Python Backend Requirements
+# Minimal dependencies for serverless deployment
+
+# Core
+flask==3.0.0
+flask-cors==4.0.0
+
+# Database
+psycopg2-binary==2.9.9
+
+# Data Processing
+pandas==2.1.4
+numpy==1.26.2
+
+# Stock Data Sources
+yfinance==0.2.32
+requests==2.31.0
+beautifulsoup4==4.12.2
+
+# Optional: NSE data (may not work in serverless)
+# nsepython==2.97
+
+# Excel support (for portfolio uploads)
+openpyxl==3.1.2

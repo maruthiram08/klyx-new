@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weekend Analysis Tool | Pro</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap"
+        rel="stylesheet">
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        heading: ['Space Grotesk', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        bullish: '#10b981', // emerald-500
+                        bearish: '#ef4444', // red-500
+                        neutral: '#f59e0b', // amber-500
+                        dark: '#18181b', // zinc-900
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #f4f4f5;
+            color: #18181b;
+        }
+
+        .glass-card {
+            background: white;
+            border: 1px solid #e4e4e7;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+            transition: all 0.2s ease;
+        }
+
+        .glass-card:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+            border-color: #d4d4d8;
+        }
+
+        .scrollbar-hide::-webkit-scrollbar {
+            display: none;
+        }
+
+        .tab-active {
+            border-bottom: 2px solid black;
+            color: black;
+            font-weight: 600;
+        }
+
+        .tab-inactive {
+            border-bottom: 2px solid transparent;
+            color: #71717a;
+        }
+
+        .tab-inactive:hover {
+            color: black;
+        }
+
+        .data-table td,
+        .data-table th {
+            padding: 0.6rem;
+            border-bottom: 1px solid #f4f4f5;
+            font-size: 0.8rem;
+        }
+
+        .data-table th {
+            text-align: left;
+            font-weight: 600;
+            color: #a1a1aa;
+            text-transform: uppercase;
+            font-size: 0.7rem;
+            letter-spacing: 0.05em;
+        }
+    </style>
+</head>
+
+<body class="antialiased h-screen flex overflow-hidden">
+
+    <!-- Sidebar (Unchanged) -->
+    <aside class="w-64 bg-white border-r border-zinc-200 flex flex-col z-20">
+        <div class="p-6 border-b border-zinc-100">
+            <div class="flex items-center gap-3">
+                <div class="w-10 h-10 bg-black text-white flex items-center justify-center rounded-xl">
+                    <i data-lucide="zap" class="w-5 h-5"></i>
+                </div>
+                <h1 class="font-heading font-bold text-xl tracking-tight">Weekend<br><span
+                        class="text-zinc-400">Analysis</span></h1>
+            </div>
+        </div>
+        <nav class="flex-1 p-4 space-y-2 overflow-y-auto">
+            <div class="text-xs font-bold text-zinc-400 uppercase tracking-wider px-2 mb-2">Dashboards</div>
+            <button onclick="filterStocks('all')"
+                class="w-full text-left px-4 py-3 rounded-lg bg-zinc-100 font-medium text-sm flex items-center justify-between"><span>All
+                    Stocks</span><span id="count-all"
+                    class="bg-white text-zinc-500 px-2 py-0.5 rounded text-xs border">0</span></button>
+            <button onclick="filterStocks('Bullish')"
+                class="w-full text-left px-4 py-3 rounded-lg hover:bg-zinc-50 text-zinc-600 font-medium text-sm flex items-center justify-between"><span>Bullish
+                    Opps</span><span id="count-bullish"
+                    class="bg-zinc-100 text-zinc-500 px-2 py-0.5 rounded text-xs border">0</span></button>
+            <button onclick="filterStocks('Bearish')"
+                class="w-full text-left px-4 py-3 rounded-lg hover:bg-zinc-50 text-zinc-600 font-medium text-sm flex items-center justify-between"><span>Bearish
+                    Risks</span><span id="count-bearish"
+                    class="bg-zinc-100 text-zinc-500 px-2 py-0.5 rounded text-xs border">0</span></button>
+            <div class="mt-8">
+                <div class="text-xs font-bold text-zinc-400 uppercase tracking-wider px-2 mb-2">Actions</div>
+                <button onclick="document.getElementById('file-upload').click()"
+                    class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-zinc-600 hover:text-black hover:bg-zinc-50 rounded-lg"><i
+                        data-lucide="upload" class="w-4 h-4"></i> Upload New Data</button>
+                <button onclick="useSampleData()"
+                    class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-zinc-600 hover:text-black hover:bg-zinc-50 rounded-lg"><i
+                        data-lucide="database" class="w-4 h-4"></i> Load Sample</button>
+                <button onclick="clearData()"
+                    class="w-full flex items-center gap-3 px-4 py-3 text-sm font-medium text-rose-600 hover:text-rose-700 hover:bg-rose-50 rounded-lg"><i
+                        data-lucide="trash-2" class="w-4 h-4"></i> Reset Workspace</button>
+                <input type="file" id="file-upload" multiple class="hidden" onchange="handleFileSelect(event)">
+            </div>
+        </nav>
+        <div class="p-4 border-t border-zinc-100">
+            <button id="btn-process" onclick="startProcessing()"
+                class="w-full bg-black text-white px-4 py-3 rounded-lg font-bold text-sm hover:bg-zinc-800 flex items-center justify-center gap-2"><span
+                    id="process-text">Run Analysis</span><i data-lucide="play"
+                    class="w-3 h-3 text-yellow-400 fill-yellow-400"></i></button>
+            <p id="status-msg" class="text-xs text-center mt-2 text-zinc-500 min-h-[1rem]"></p>
+        </div>
+    </aside>
+
+    <!-- Main Content -->
+    <main class="flex-1 overflow-y-auto relative bg-zinc-50/50">
+
+        <!-- DASHBOARD VIEW -->
+        <div id="view-dashboard">
+            <header
+                class="sticky top-0 bg-white/80 backdrop-blur-md border-b border-zinc-200 px-8 py-4 z-10 flex justify-between items-center">
+                <div>
+                    <h2 class="text-2xl font-heading font-bold" id="page-title">Market Overview</h2>
+                    <p class="text-sm text-zinc-500">Real-time insights powered by Hybrid AI Analysis</p>
+                </div>
+                <div class="flex items-center gap-4">
+                    <div class="relative"><i data-lucide="search"
+                            class="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-zinc-400"></i><input
+                            type="text" placeholder="Search ticker..."
+                            class="pl-10 pr-4 py-2 border border-zinc-200 rounded-lg text-sm bg-white w-64"></div>
+                </div>
+            </header>
+            <div class="p-8 max-w-7xl mx-auto">
+                <div id="view-empty" class="text-center py-20">
+                    <div class="w-20 h-20 bg-zinc-100 rounded-full flex items-center justify-center mx-auto mb-6"><i
+                            data-lucide="bar-chart-2" class="w-8 h-8 text-zinc-400"></i></div>
+                    <h3 class="text-xl font-bold mb-2">No Analysis Loaded</h3>
+                    <p class="text-zinc-500 mb-8">Upload data or load sample to begin.</p>
+                    <button onclick="document.getElementById('file-upload').click()"
+                        class="bg-black text-white px-6 py-3 rounded-lg font-bold hover:bg-zinc-800 flex items-center gap-2 mx-auto"><i
+                            data-lucide="upload-cloud" class="w-5 h-5"></i> Upload 4 Excel Files</button>
+                </div>
+                <div id="view-loading" class="hidden text-center py-20">
+                    <div
+                        class="w-12 h-12 border-4 border-black border-t-transparent rounded-full animate-spin mb-6 mx-auto">
+                    </div>
+                    <h3 id="loading-title" class="text-lg font-bold">Crunching Numbers...</h3>
+                    <p id="loading-desc" class="text-zinc-500 text-sm">Enriching data & running AI models</p>
+                </div>
+                <div id="stock-grid" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6 hidden"></div>
+            </div>
+        </div>
+
+        <!-- DETAILS VIEW -->
+        <div id="view-details" class="hidden bg-white min-h-full absolute inset-0 z-30 overflow-y-auto">
+            <div
+                class="bg-white border-b border-zinc-200 sticky top-0 z-40 px-8 py-4 flex items-center justify-between shadow-sm">
+                <button onclick="closeDetails()"
+                    class="flex items-center gap-2 text-zinc-500 hover:text-black font-medium text-sm"><i
+                        data-lucide="arrow-left" class="w-4 h-4"></i> Back to Dashboard</button>
+            </div>
+
+            <div class="max-w-7xl mx-auto p-8">
+                <!-- Hero -->
+                <div class="mb-8 p-8 bg-zinc-50 rounded-2xl border border-zinc-100 flex justify-between items-start">
+                    <div>
+                        <h1 id="detail-name" class="text-4xl font-heading font-bold mb-2 text-zinc-900"></h1>
+                        <div class="flex gap-4 text-zinc-500 font-mono text-sm mb-4"><span
+                                id="detail-code"></span><span>•</span><span id="detail-sector"></span></div>
+                        <div class="flex gap-2"><span id="detail-score-badge"
+                                class="px-3 py-1 rounded-full text-xs font-bold border bg-white"></span></div>
+                    </div>
+                    <div class="flex flex-col items-end gap-6">
+                        <div class="flex items-end gap-8 text-right">
+                            <div>
+                                <div id="detail-vwap" class="text-2xl font-bold font-mono text-zinc-400"></div>
+                                <div class="text-[10px] text-zinc-400 uppercase tracking-wider font-bold mt-1">VWAP Day
+                                </div>
+                            </div>
+                            <div>
+                                <div id="detail-price" class="text-4xl font-bold font-mono text-zinc-900 leading-none">
+                                </div>
+                                <div id="detail-change" class="text-base font-bold mt-2"></div>
+                            </div>
+                        </div>
+                        <div class="flex gap-3">
+                            <div id="detail-news-badge"
+                                class="px-4 py-2 rounded-lg font-bold text-sm border flex items-center gap-2 bg-white">
+                            </div>
+                            <div id="detail-tech-badge"
+                                class="px-4 py-2 rounded-lg font-bold text-sm border flex items-center gap-2 bg-white">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Tabs -->
+                <div class="flex border-b border-zinc-200 mb-8 overflow-x-auto">
+                    <button onclick="switchTab('overview')" id="tab-overview"
+                        class="tab-active px-6 py-3 text-sm font-medium whitespace-nowrap">Overview</button>
+                    <button onclick="switchTab('technicals')" id="tab-technicals"
+                        class="tab-inactive px-6 py-3 text-sm font-medium whitespace-nowrap">Technicals (Full)</button>
+                    <button onclick="switchTab('fundamentals')" id="tab-fundamentals"
+                        class="tab-inactive px-6 py-3 text-sm font-medium whitespace-nowrap">Fundamentals</button>
+                    <button onclick="switchTab('holdings')" id="tab-holdings"
+                        class="tab-inactive px-6 py-3 text-sm font-medium whitespace-nowrap">Holdings History</button>
+                    <button onclick="switchTab('news')" id="tab-news"
+                        class="tab-inactive px-6 py-3 text-sm font-medium whitespace-nowrap">News</button>
+                </div>
+
+                <!-- 1. OVERVIEW -->
+                <div id="content-overview" class="block">
+                    <h3 class="font-bold text-lg mb-4">Performance</h3>
+                    <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-7 gap-4 mb-8">
+                        <div class="p-4 rounded-lg bg-white border border-zinc-200 text-center">
+                            <div class="text-xs text-zinc-400 mb-1">1 Day</div>
+                            <div id="perf-1d" class="font-bold font-mono"></div>
+                        </div>
+                        <div class="p-4 rounded-lg bg-white border border-zinc-200 text-center">
+                            <div class="text-xs text-zinc-400 mb-1">1 Month</div>
+                            <div id="perf-1m" class="font-bold font-mono"></div>
+                        </div>
+                        <div class="p-4 rounded-lg bg-white border border-zinc-200 text-center">
+                            <div class="text-xs text-zinc-400 mb-1">3 Month</div>
+                            <div id="perf-3m" class="font-bold font-mono"></div>
+                        </div>
+                        <div class="p-4 rounded-lg bg-white border border-zinc-200 text-center">
+                            <div class="text-xs text-zinc-400 mb-1">1 Year</div>
+                            <div id="perf-1y" class="font-bold font-mono"></div>
+                        </div>
+                        <div class="p-4 rounded-lg bg-white border border-zinc-200 text-center">
+                            <div class="text-xs text-zinc-400 mb-1">3 Year</div>
+                            <div id="perf-3y" class="font-bold font-mono"></div>
+                        </div>
+                        <div class="p-4 rounded-lg bg-white border border-zinc-200 text-center">
+                            <div class="text-xs text-zinc-400 mb-1">Rel (Nifty)</div>
+                            <div id="perf-rel-nifty" class="font-bold font-mono"></div>
+                        </div>
+                        <div class="p-4 rounded-lg bg-white border border-zinc-200 text-center">
+                            <div class="text-xs text-zinc-400 mb-1">Rel (Sector)</div>
+                            <div id="perf-rel-sector" class="font-bold font-mono"></div>
+                        </div>
+                    </div>
+                    <h3 class="font-bold text-lg mb-4">Price Range</h3>
+                    <div
+                        class="bg-white rounded-xl border border-zinc-200 p-6 mb-8 grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div>
+                            <div class="flex justify-between text-xs text-zinc-500 mb-2"><span>Day Low</span> <span>Day
+                                    High</span></div>
+                            <div class="h-2 bg-zinc-100 rounded-full">
+                                <div class="h-full bg-black rounded-full w-1/2 mx-auto"></div>
+                            </div>
+                            <div class="flex justify-between font-mono text-sm mt-1"><span id="val-day-low"></span>
+                                <span id="val-day-high"></span>
+                            </div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs text-zinc-500 mb-2"><span>1Y Low</span> <span>1Y
+                                    High</span></div>
+                            <div class="h-2 bg-zinc-100 rounded-full">
+                                <div class="h-full bg-black rounded-full w-2/3 mx-auto"></div>
+                            </div>
+                            <div class="flex justify-between font-mono text-sm mt-1"><span id="val-1y-low"></span> <span
+                                    id="val-1y-high"></span></div>
+                        </div>
+                        <div>
+                            <div class="flex justify-between text-xs text-zinc-500 mb-2"><span>5Y Low</span> <span>5Y
+                                    High</span></div>
+                            <div class="h-2 bg-zinc-100 rounded-full">
+                                <div class="h-full bg-black rounded-full w-3/4 mx-auto"></div>
+                            </div>
+                            <div class="flex justify-between font-mono text-sm mt-1"><span id="val-5y-low"></span> <span
+                                    id="val-5y-high"></span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. TECHNICALS (EXPANDED) -->
+                <div id="content-technicals" class="hidden space-y-8">
+                    <!-- Top Row: Oscillators & Risk -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                        <div class="bg-white rounded-xl border border-zinc-200 overflow-hidden">
+                            <div
+                                class="px-6 py-4 border-b border-zinc-100 bg-zinc-50 font-bold text-sm uppercase text-zinc-500 tracking-wider">
+                                Oscillators</div>
+                            <table class="w-full data-table">
+                                <tr>
+                                    <th>Indicator</th>
+                                    <th>Value</th>
+                                    <th>Signal</th>
+                                </tr>
+                                <tr>
+                                    <td>RSI (14)</td>
+                                    <td id="tech-rsi-val"></td>
+                                    <td id="tech-rsi-sig"></td>
+                                </tr>
+                                <tr>
+                                    <td>MACD</td>
+                                    <td id="tech-macd-val"></td>
+                                    <td id="tech-macd-sig"></td>
+                                </tr>
+                                <tr>
+                                    <td>MFI</td>
+                                    <td id="tech-mfi-val"></td>
+                                    <td id="tech-mfi-sig"></td>
+                                </tr>
+                                <tr>
+                                    <td>ADX</td>
+                                    <td id="tech-adx-val"></td>
+                                    <td id="tech-adx-sig"></td>
+                                </tr>
+                                <tr>
+                                    <td>ATR</td>
+                                    <td id="tech-atr-val"></td>
+                                    <td class="text-zinc-400">-</td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="bg-white rounded-xl border border-zinc-200 overflow-hidden">
+                            <div
+                                class="px-6 py-4 border-b border-zinc-100 bg-zinc-50 font-bold text-sm uppercase text-zinc-500 tracking-wider">
+                                Momentum & Risk</div>
+                            <table class="w-full data-table">
+                                <tr>
+                                    <th>Metric</th>
+                                    <th>Value</th>
+                                </tr>
+                                <tr>
+                                    <td>Beta (1Y)</td>
+                                    <td id="tech-beta-1y" class="font-mono"></td>
+                                </tr>
+                                <tr>
+                                    <td>Beta (1M)</td>
+                                    <td id="tech-beta-1m" class="font-mono"></td>
+                                </tr>
+                                <tr>
+                                    <td>ROC (21)</td>
+                                    <td id="tech-roc-21" class="font-mono"></td>
+                                </tr>
+                                <tr>
+                                    <td>ROC (125)</td>
+                                    <td id="tech-roc-125" class="font-mono"></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    <!-- Mid Row: Moving Averages -->
+                    <div class="bg-white rounded-xl border border-zinc-200 overflow-hidden">
+                        <div
+                            class="px-6 py-4 border-b border-zinc-100 bg-zinc-50 font-bold text-sm uppercase text-zinc-500 tracking-wider">
+                            Moving Averages (SMA & EMA)</div>
+                        <div class="grid grid-cols-1 md:grid-cols-2">
+                            <table class="w-full data-table border-r border-zinc-100">
+                                <tr>
+                                    <th>Period</th>
+                                    <th>SMA Value</th>
+                                    <th>Signal</th>
+                                </tr>
+                                <tr>
+                                    <td>MA 5</td>
+                                    <td id="tech-sma5-val"></td>
+                                    <td id="tech-sma5-sig"></td>
+                                </tr>
+                                <tr>
+                                    <td>MA 30</td>
+                                    <td id="tech-sma30-val"></td>
+                                    <td id="tech-sma30-sig"></td>
+                                </tr>
+                                <tr>
+                                    <td>MA 50</td>
+                                    <td id="tech-sma50-val"></td>
+                                    <td id="tech-sma50-sig"></td>
+                                </tr>
+                                <tr>
+                                    <td>MA 100</td>
+                                    <td id="tech-sma100-val"></td>
+                                    <td id="tech-sma100-sig"></td>
+                                </tr>
+                                <tr>
+                                    <td>MA 200</td>
+                                    <td id="tech-sma200-val"></td>
+                                    <td id="tech-sma200-sig"></td>
+                                </tr>
+                            </table>
+                            <table class="w-full data-table">
+                                <tr>
+                                    <th>Period</th>
+                                    <th>EMA Value</th>
+                                    <th>Signal</th>
+                                </tr>
+                                <tr>
+                                    <td>EMA 12</td>
+                                    <td id="tech-ema12-val"></td>
+                                    <td id="tech-ema12-sig"></td>
+                                </tr>
+                                <tr>
+                                    <td>EMA 20</td>
+                                    <td id="tech-ema20-val"></td>
+                                    <td id="tech-ema20-sig"></td>
+                                </tr>
+                                <tr>
+                                    <td>EMA 50</td>
+                                    <td id="tech-ema50-val"></td>
+                                    <td id="tech-ema50-sig"></td>
+                                </tr>
+                                <tr>
+                                    <td>EMA 100</td>
+                                    <td id="tech-ema100-val"></td>
+                                    <td id="tech-ema100-sig"></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    <!-- Bottom Row: Levels -->
+                    <div class="bg-white rounded-xl border border-zinc-200 p-6">
+                        <div class="font-bold text-sm uppercase text-zinc-500 tracking-wider mb-4">Support & Resistance
+                            Levels</div>
+                        <div class="flex justify-between items-center text-sm font-mono flex-wrap gap-4">
+                            <div class="text-center w-20">
+                                <div class="text-emerald-700 font-bold" id="level-s3"></div>
+                                <div class="text-xs text-zinc-400 mt-1">S3</div>
+                            </div>
+                            <div class="text-center w-20">
+                                <div class="text-emerald-600 font-bold" id="level-s2"></div>
+                                <div class="text-xs text-zinc-400 mt-1">S2</div>
+                            </div>
+                            <div class="text-center w-20">
+                                <div class="text-emerald-500 font-bold" id="level-s1"></div>
+                                <div class="text-xs text-zinc-400 mt-1">S1</div>
+                            </div>
+                            <div class="text-center w-28 border-x border-zinc-100 bg-zinc-50 py-2 rounded">
+                                <div class="text-zinc-900 font-bold text-lg" id="level-pivot"></div>
+                                <div class="text-xs text-zinc-400 mt-1">PIVOT</div>
+                            </div>
+                            <div class="text-center w-20">
+                                <div class="text-rose-400 font-bold" id="level-r1"></div>
+                                <div class="text-xs text-zinc-400 mt-1">R1</div>
+                            </div>
+                            <div class="text-center w-20">
+                                <div class="text-rose-500 font-bold" id="level-r2"></div>
+                                <div class="text-xs text-zinc-400 mt-1">R2</div>
+                            </div>
+                            <div class="text-center w-20">
+                                <div class="text-rose-600 font-bold" id="level-r3"></div>
+                                <div class="text-xs text-zinc-400 mt-1">R3</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. FUNDAMENTALS (EXPANDED) -->
+                <div id="content-fundamentals" class="hidden space-y-8">
+                    <!-- Ratios & Efficiency -->
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div class="bg-white rounded-xl border border-zinc-200 overflow-hidden">
+                            <div
+                                class="px-6 py-4 border-b border-zinc-100 bg-zinc-50 font-bold text-sm uppercase text-zinc-500 tracking-wider">
+                                Valuation Ratios</div>
+                            <table class="w-full data-table">
+                                <tr>
+                                    <td>PE (TTM)</td>
+                                    <td id="fund-pe" class="font-mono font-bold text-right"></td>
+                                </tr>
+                                <tr>
+                                    <td>Sector PE</td>
+                                    <td id="fund-pe-sec" class="font-mono text-right"></td>
+                                </tr>
+                                <tr>
+                                    <td>Industry PE</td>
+                                    <td id="fund-pe-ind" class="font-mono text-right"></td>
+                                </tr>
+                                <tr>
+                                    <td>PE 3Yr Avg</td>
+                                    <td id="fund-pe-3y" class="font-mono text-right"></td>
+                                </tr>
+                                <tr>
+                                    <td>PEG Ratio</td>
+                                    <td id="fund-peg" class="font-mono text-right"></td>
+                                </tr>
+                                <tr>
+                                    <td>PB Ratio</td>
+                                    <td id="fund-pb" class="font-mono text-right"></td>
+                                </tr>
+                                <tr>
+                                    <td>Piotroski</td>
+                                    <td id="fund-piotroski" class="font-mono font-bold text-right"></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="bg-white rounded-xl border border-zinc-200 overflow-hidden">
+                            <div
+                                class="px-6 py-4 border-b border-zinc-100 bg-zinc-50 font-bold text-sm uppercase text-zinc-500 tracking-wider">
+                                Efficiency</div>
+                            <table class="w-full data-table">
+                                <tr>
+                                    <td>ROE</td>
+                                    <td id="fund-roe" class="font-mono font-bold text-right"></td>
+                                </tr>
+                                <tr>
+                                    <td>Sector ROE</td>
+                                    <td id="fund-roe-sec" class="font-mono text-right"></td>
+                                </tr>
+                                <tr>
+                                    <td>ROA</td>
+                                    <td id="fund-roa" class="font-mono text-right"></td>
+                                </tr>
+                                <tr>
+                                    <td>Op Margin</td>
+                                    <td id="fund-opm" class="font-mono text-right"></td>
+                                </tr>
+                                <tr>
+                                    <td>Div Yield</td>
+                                    <td id="fund-dy" class="font-mono text-right"></td>
+                                </tr>
+                            </table>
+                        </div>
+                        <div class="bg-white rounded-xl border border-zinc-200 overflow-hidden">
+                            <div
+                                class="px-6 py-4 border-b border-zinc-100 bg-zinc-50 font-bold text-sm uppercase text-zinc-500 tracking-wider">
+                                Growth (YoY)</div>
+                            <table class="w-full data-table">
+                                <tr>
+                                    <td>Revenue YoY</td>
+                                    <td id="fund-rev-gr" class="font-mono text-right"></td>
+                                </tr>
+                                <tr>
+                                    <td>Profit YoY</td>
+                                    <td id="fund-prof-gr" class="font-mono text-right"></td>
+                                </tr>
+                                <tr>
+                                    <td>EPS Growth</td>
+                                    <td id="fund-eps-gr" class="font-mono text-right"></td>
+                                </tr>
+                                <tr>
+                                    <td>Sector Rev Gr</td>
+                                    <td id="fund-rev-sec" class="font-mono text-right"></td>
+                                </tr>
+                                <tr>
+                                    <td>Sector Prof Gr</td>
+                                    <td id="fund-prof-sec" class="font-mono text-right"></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                    <!-- Financials -->
+                    <div class="bg-white rounded-xl border border-zinc-200 overflow-hidden">
+                        <div
+                            class="px-6 py-4 border-b border-zinc-100 bg-zinc-50 font-bold text-sm uppercase text-zinc-500 tracking-wider">
+                            Financial Snapshot</div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 p-6">
+                            <div>
+                                <h4 class="font-bold text-sm mb-3">Income Statement (Annual)</h4>
+                                <div class="grid grid-cols-2 gap-4 text-sm">
+                                    <div class="flex justify-between border-b pb-1"><span>Op Revenue</span><span
+                                            class="font-mono" id="fin-rev-ann"></span></div>
+                                    <div class="flex justify-between border-b pb-1"><span>Net Profit</span><span
+                                            class="font-mono" id="fin-prof-ann"></span></div>
+                                    <div class="flex justify-between border-b pb-1"><span>Op Profit</span><span
+                                            class="font-mono" id="fin-op-ann"></span></div>
+                                    <div class="flex justify-between border-b pb-1"><span>EPS TTM</span><span
+                                            class="font-mono" id="fin-eps"></span></div>
+                                </div>
+                            </div>
+                            <div>
+                                <h4 class="font-bold text-sm mb-3">Cash Flow (Annual)</h4>
+                                <div class="grid grid-cols-2 gap-4 text-sm">
+                                    <div class="flex justify-between border-b pb-1"><span>Operating</span><span
+                                            class="font-mono" id="fin-cf-ops"></span></div>
+                                    <div class="flex justify-between border-b pb-1"><span>Investing</span><span
+                                            class="font-mono" id="fin-cf-inv"></span></div>
+                                    <div class="flex justify-between border-b pb-1"><span>Financing</span><span
+                                            class="font-mono" id="fin-cf-fin"></span></div>
+                                    <div class="flex justify-between border-b pb-1"><span>Net Change</span><span
+                                            class="font-mono font-bold" id="fin-cf-net"></span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. HOLDINGS (EXPANDED) -->
+                <div id="content-holdings" class="hidden space-y-8">
+                    <!-- Forecasts (Hidden Placeholder) -->
+                    <div
+                        class="bg-white rounded-xl border border-zinc-200 p-6 flex flex-col items-center justify-center min-h-[150px] mb-8">
+                        <div class="flex items-center gap-3">
+                            <i data-lucide="clock" class="w-5 h-5 text-zinc-400"></i>
+                            <span class="font-bold text-zinc-500">Analyst Forecasts Coming Soon</span>
+                        </div>
+                    </div>
+
+                    <h3 class="font-bold text-lg mb-4">Shareholding Pattern History</h3>
+                    <div class="bg-white rounded-xl border border-zinc-200 overflow-hidden">
+                        <table class="w-full data-table">
+                            <thead>
+                                <tr class="bg-zinc-50">
+                                    <th>Category</th>
+                                    <th class="text-right">Current %</th>
+                                    <th class="text-right">Chg 1M</th>
+                                    <th class="text-right">Chg 3M</th>
+                                    <th class="text-right">Chg QoQ</th>
+                                    <th class="text-right">Chg 4Qtr</th>
+                                    <th class="text-right">Chg 8Qtr</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td class="font-bold">Promoters</td>
+                                    <td class="text-right font-mono font-bold" id="h-prom-curr"></td>
+                                    <td class="text-right text-zinc-300">-</td>
+                                    <td class="text-right text-zinc-300">-</td>
+                                    <td class="text-right font-mono" id="h-prom-qoq"></td>
+                                    <td class="text-right font-mono" id="h-prom-4q"></td>
+                                    <td class="text-right font-mono" id="h-prom-8q"></td>
+                                </tr>
+                                <tr>
+                                    <td class="font-bold">FIIs</td>
+                                    <td class="text-right font-mono font-bold" id="h-fii-curr"></td>
+                                    <td class="text-right text-zinc-300">-</td>
+                                    <td class="text-right text-zinc-300">-</td>
+                                    <td class="text-right font-mono" id="h-fii-qoq"></td>
+                                    <td class="text-right font-mono" id="h-fii-4q"></td>
+                                    <td class="text-right font-mono" id="h-fii-8q"></td>
+                                </tr>
+                                <tr>
+                                    <td class="font-bold">Mutual Funds</td>
+                                    <td class="text-right font-mono font-bold" id="h-mf-curr"></td>
+                                    <td class="text-right font-mono" id="h-mf-1m"></td>
+                                    <td class="text-right font-mono" id="h-mf-3m"></td>
+                                    <td class="text-right font-mono" id="h-mf-qoq"></td>
+                                    <td class="text-right font-mono" id="h-mf-4q"></td>
+                                    <td class="text-right font-mono" id="h-mf-8q"></td>
+                                </tr>
+                                <tr>
+                                    <td class="font-bold">Institutions</td>
+                                    <td class="text-right font-mono font-bold" id="h-inst-curr"></td>
+                                    <td class="text-right text-zinc-300">-</td>
+                                    <td class="text-right text-zinc-300">-</td>
+                                    <td class="text-right font-mono" id="h-inst-qoq"></td>
+                                    <td class="text-right font-mono" id="h-inst-4q"></td>
+                                    <td class="text-right font-mono" id="h-inst-8q"></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- 5. NEWS -->
+                <div id="content-news" class="hidden">
+                    <div class="max-w-3xl">
+                        <h3 class="font-bold text-lg mb-6 flex items-center gap-2"><i data-lucide="newspaper"
+                                class="w-5 h-5"></i> Recent Headlines</h3>
+                        <ul id="detail-news-list" class="space-y-4"></ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        let allData = [];
+        let currentStock = null;
+        lucide.createIcons();
+
+        // Formatters
+        const getSentimentClass = (l) => { const s = (l || '').toLowerCase(); return s.includes('bullish') ? 'bg-emerald-100 text-emerald-800 border-emerald-200' : s.includes('bearish') ? 'bg-rose-100 text-rose-800 border-rose-200' : 'bg-zinc-100 text-zinc-800 border-zinc-200'; };
+        const getScoreColor = (s) => s > 0 ? 'text-emerald-600' : s < 0 ? 'text-rose-600' : 'text-zinc-500';
+        const formatNum = (v, dec = 2) => (v === undefined || v === null || v === '') ? '-' : parseFloat(v).toFixed(dec);
+        const formatColor = (val, s = '') => { const v = parseFloat(val); if (isNaN(v)) return `<span class="text-zinc-400">-</span>`; return `<span class="${v > 0 ? 'text-emerald-600' : v < 0 ? 'text-rose-600' : 'text-zinc-600'}">${v > 0 ? '+' : ''}${v.toFixed(2)}${s}</span>`; };
+
+        function createStockCard(stock) {
+            const price = stock['Current Price'] ? `₹${parseFloat(stock['Current Price']).toFixed(0)}` : 'N/A';
+            const roe = stock['ROE Annual %'] ? parseFloat(stock['ROE Annual %']).toFixed(1) + '%' : '-';
+            const pe = stock['PE TTM Price to Earnings'] ? parseFloat(stock['PE TTM Price to Earnings']).toFixed(1) + 'x' : '-';
+            const newsSent = stock['News_Sentiment'] || 'Neutral';
+            const techTrend = stock['Tech_Trend'] || 'Neutral';
+            const headlines = stock['News_Headlines'] && stock['News_Headlines'] !== '[]' ? JSON.parse(stock['News_Headlines']) : [];
+
+            return `<div onclick="openDetails('${stock['NSE Code'] || stock['Stock Name']}')" class="glass-card rounded-xl p-5 flex flex-col h-full group cursor-pointer hover:border-black/20 transition-all">
+                <div class="flex justify-between items-start mb-4">
+                    <div><h4 class="font-bold font-heading text-lg leading-tight truncate w-48">${stock['Stock Name']}</h4><div class="text-xs font-mono text-zinc-400 mt-1">${stock['NSE Code'] || 'NSE'}</div></div>
+                    <div class="text-right"><div class="font-bold text-lg">${price}</div></div>
+                </div>
+                <div class="flex gap-2 mb-6"><span class="px-2 py-1 rounded-md text-xs font-bold border ${getSentimentClass(newsSent)}">${newsSent}</span><span class="px-2 py-1 rounded-md text-xs font-bold border ${getSentimentClass(techTrend)}">${techTrend}</span></div>
+                <div class="grid grid-cols-3 gap-2 mb-6 bg-zinc-50 p-3 rounded-lg border border-zinc-100">
+                    <div class="text-center"><div class="text-[10px] text-zinc-400 uppercase font-bold tracking-wider">ROE</div><div class="font-mono font-medium text-sm text-zinc-700">${roe}</div></div>
+                    <div class="text-center border-l border-zinc-200"><div class="text-[10px] text-zinc-400 uppercase font-bold tracking-wider">P/E</div><div class="font-mono font-medium text-sm text-zinc-700">${pe}</div></div>
+                    <div class="text-center border-l border-zinc-200"><div class="text-[10px] text-zinc-400 uppercase font-bold tracking-wider">Score</div><div class="font-mono font-medium text-sm ${getScoreColor(stock['Trendlyne Momentum Score'] || 0)}">${Math.round(stock['Trendlyne Momentum Score'] || 0)}</div></div>
+                </div>
+                <div class="mt-auto pt-4 border-t border-zinc-100"><div class="text-xs font-bold text-zinc-400 mb-2">HEADLINES</div><ul class="space-y-2">${headlines.slice(0, 2).map(h => `<li><span class="block text-xs text-zinc-600 line-clamp-2">${h.title}</span></li>`).join('') || '<span class="text-zinc-300 italic text-xs">No news</span>'}</ul></div>
+            </div>`;
+        }
+
+        function openDetails(symbol) {
+            const s = allData.find(x => (x['NSE Code'] === symbol || x['Stock Name'] === symbol));
+            if (!s) return;
+            currentStock = s;
+
+            // Header
+            document.getElementById('detail-name').innerText = s['Stock Name'];
+            document.getElementById('detail-code').innerText = s['NSE Code'] || 'NSE';
+            document.getElementById('detail-sector').innerText = s['sector_name'] || s['Industry Name'] || '';
+            document.getElementById('detail-price').innerText = `₹${parseFloat(s['Current Price'] || 0).toFixed(2)}`;
+            document.getElementById('detail-change').innerHTML = formatColor(s['Day change %'], '%');
+            document.getElementById('detail-vwap').innerText = formatNum(s['VWAP Day']);
+            document.getElementById('detail-score-badge').innerText = `Momentum: ${Math.round(s['Trendlyne Momentum Score'] || 0)}`;
+            document.getElementById('detail-news-badge').innerHTML = `<i data-lucide="newspaper" class="w-4 h-4"></i> ${s['News_Sentiment'] || 'Neutral'}`;
+            document.getElementById('detail-news-badge').className = `px-4 py-2 rounded-lg font-bold text-sm border flex items-center gap-2 ${getSentimentClass(s['News_Sentiment'])}`;
+            document.getElementById('detail-tech-badge').innerHTML = `<i data-lucide="activity" class="w-4 h-4"></i> ${s['Tech_Trend'] || 'Neutral'}`;
+            document.getElementById('detail-tech-badge').className = `px-4 py-2 rounded-lg font-bold text-sm border flex items-center gap-2 ${getSentimentClass(s['Tech_Trend'])}`;
+
+            // Overview
+            ['1d', '1m', '3m', '1y', '3y'].forEach(k => { const dbk = { '1d': 'Day change %', '1m': 'Month Change %', '3m': 'Qtr Change %', '1y': '1Yr change %', '3y': '3Yr price change %' }; document.getElementById(`perf-${k}`).innerHTML = formatColor(s[dbk[k]], '%'); });
+            document.getElementById('perf-rel-nifty').innerHTML = formatColor(s['Relative returns vs Nifty50 week%'], '%');
+            document.getElementById('perf-rel-sector').innerHTML = formatColor(s['Relative returns vs Sector month%'], '%');
+            const setVal = (id, k) => document.getElementById(id).innerText = formatNum(s[k]);
+            setVal('val-day-low', 'Day Low'); setVal('val-day-high', 'Day High');
+            setVal('val-1y-low', '1Yr Low'); setVal('val-1y-high', '1Yr High');
+            setVal('val-5y-low', '5Yr Low'); setVal('val-5y-high', '5Yr High');
+
+            // Technicals
+            setVal('tech-rsi-val', 'Day RSI'); document.getElementById('tech-rsi-sig').innerText = s['Day RSI'] > 70 ? 'OB' : s['Day RSI'] < 30 ? 'OS' : 'Neut';
+            setVal('tech-macd-val', 'Day MACD'); document.getElementById('tech-macd-sig').innerText = s['Day MACD'] > s['Day MACD Signal Line'] ? 'Bull' : 'Bear';
+            const mfi = s['Day MFI'] || s['Tech_MFI']; document.getElementById('tech-mfi-val').innerText = formatNum(mfi); document.getElementById('tech-mfi-sig').innerText = mfi > 80 ? 'OB' : mfi < 20 ? 'OS' : 'Neut';
+            setVal('tech-adx-val', 'Day ADX'); document.getElementById('tech-adx-sig').innerText = s['Day ADX'] > 25 ? 'Trend' : 'Weak';
+            setVal('tech-atr-val', 'Day ATR');
+            setVal('tech-beta-1y', 'Beta 1Year'); setVal('tech-beta-1m', 'Beta 1Month');
+            setVal('tech-roc-21', 'Day ROC21'); setVal('tech-roc-125', 'Day ROC125');
+
+            // MAs
+            const p = s['Current Price'];
+            const setMA = (t, k) => {
+                const v = s[k];
+                document.getElementById(`${t}-val`).innerText = formatNum(v);
+                document.getElementById(`${t}-sig`).innerHTML = p > v ? '<span class="text-emerald-500 font-bold">Buy</span>' : '<span class="text-rose-500 font-bold">Sell</span>';
+            };
+            setMA('tech-sma5', 'Day SMA5'); setMA('tech-sma30', 'Day SMA30'); setMA('tech-sma50', 'Day SMA50'); setMA('tech-sma100', 'Day SMA100'); setMA('tech-sma200', 'Day SMA200');
+            setMA('tech-ema12', 'Day EMA12'); setMA('tech-ema20', 'Day EMA20'); setMA('tech-ema50', 'Day EMA50'); setMA('tech-ema100', 'Day EMA100');
+
+            // Levels
+            setVal('level-pivot', 'Standard Pivot point');
+            setVal('level-s1', 'Standard support S1'); setVal('level-s2', 'Standard support S2'); setVal('level-s3', 'Standard support S3');
+            setVal('level-r1', 'Standard resistance R1'); setVal('level-r2', 'Standard resistance R2'); setVal('level-r3', 'Standard resistance R3');
+
+            // Fundamentals
+            setVal('fund-pe', 'PE TTM Price to Earnings'); setVal('fund-pe-sec', 'Sector PE TTM'); setVal('fund-pe-ind', 'Industry PE TTM'); setVal('fund-pe-3y', 'PE 3Yr Average');
+            setVal('fund-peg', 'PEG TTM PE to Growth'); setVal('fund-pb', 'Price to Book Value Adjusted'); setVal('fund-piotroski', 'Piotroski Score');
+            document.getElementById('fund-roe').innerText = formatNum(s['ROE Annual %']) + '%';
+            document.getElementById('fund-roe-sec').innerText = formatNum(s['Sector Return on Equity ROE']) + '%';
+            document.getElementById('fund-roa').innerText = formatNum(s['RoA Annual %']) + '%';
+            document.getElementById('fund-opm').innerText = formatNum(s['Operating Profit Margin Qtr %']) + '%';
+            document.getElementById('fund-dy').innerText = formatNum(s['Dividend Yield Annual %']) + '%';
+            document.getElementById('fund-rev-gr').innerHTML = formatColor(s['Revenue Growth Annual YoY %'], '%');
+            document.getElementById('fund-prof-gr').innerHTML = formatColor(s['Net Profit Annual YoY Growth %'], '%');
+            document.getElementById('fund-eps-gr').innerHTML = formatColor(s['EPS TTM Growth %'], '%');
+            document.getElementById('fund-rev-sec').innerHTML = formatColor(s['Sector Revenue Growth Annual YoY %'], '%');
+            document.getElementById('fund-prof-sec').innerHTML = formatColor(s['Sector Net Profit Annual YoY Growth %'], '%'); // Inferred col name based on pattern
+
+            setVal('fin-rev-ann', 'Operating Revenue Annual'); setVal('fin-prof-ann', 'Net Profit Annual'); setVal('fin-op-ann', 'Operating Profit Annual'); setVal('fin-eps', 'Basic EPS TTM');
+            setVal('fin-cf-ops', 'Cash from Operating Activity Annual'); setVal('fin-cf-inv', 'Cash from Investing Activity Annual'); setVal('fin-cf-fin', 'Cash from Financing Annual Activity'); setVal('fin-cf-net', 'Net Cash Flow Annual');
+
+            // Holdings
+            const setHold = (p, kC, k1, k3, kQ, k4, k8) => {
+                document.getElementById(`h-${p}-curr`).innerText = formatNum(s[kC]) + '%';
+                if (k1) document.getElementById(`h-${p}-1m`).innerHTML = formatColor(s[k1]);
+                if (k3) document.getElementById(`h-${p}-3m`).innerHTML = formatColor(s[k3]);
+                document.getElementById(`h-${p}-qoq`).innerHTML = formatColor(s[kQ]);
+                document.getElementById(`h-${p}-4q`).innerHTML = formatColor(s[k4]);
+                document.getElementById(`h-${p}-8q`).innerHTML = formatColor(s[k8]);
+            };
+            setHold('prom', 'Promoter holding latest %', null, null, 'Promoter holding change QoQ %', 'Promoter holding change 4Qtr %', 'Promoter holding change 8Qtr %');
+            setHold('fii', 'FII holding current Qtr %', null, null, 'FII holding change QoQ %', 'FII holding change 4Qtr %', 'FII holding change 8Qtr %');
+            setHold('mf', 'MF holding current Qtr %', 'MF holding change 1Month %', 'MF holding change 3Month%', 'MF holding change QoQ %', 'MF holding change 4Qtr %', 'MF holding change 8Qtr %');
+            setHold('inst', 'Institutional holding current Qtr %', null, null, 'Institutional holding change QoQ %', 'Institutional holding change 4Qtr %', 'Institutional holding change 8Qtr %');
+
+            // News
+            const newsList = document.getElementById('detail-news-list');
+            const newsz = s['News_Headlines'] && s['News_Headlines'] !== '[]' ? JSON.parse(s['News_Headlines']) : [];
+            newsList.innerHTML = newsz.map(h => `<li class="p-4 rounded-lg bg-zinc-50 border border-zinc-100 hover:bg-white transition-all"><a href="${h.link || '#'}" target="_blank" class="block"><h4 class="font-bold text-zinc-900 mb-2 hover:underline">${h.title}</h4><div class="flex items-center gap-4 text-xs text-zinc-500"><span class="px-2 py-0.5 bg-white border border-zinc-200 rounded">${h.source}</span><span>${new Date().toLocaleDateString()}</span></div></a></li>`).join('') || '<div class="text-zinc-400 italic">No news</div>';
+
+            // Show
+            document.getElementById('view-dashboard').classList.add('hidden');
+            document.getElementById('view-details').classList.remove('hidden');
+            switchTab('overview');
+            lucide.createIcons();
+        }
+
+        function closeDetails() { document.getElementById('view-details').classList.add('hidden'); document.getElementById('view-dashboard').classList.remove('hidden'); }
+        function switchTab(t) {
+            ['overview', 'technicals', 'fundamentals', 'holdings', 'news'].forEach(x => { document.getElementById(`content-${x}`).classList.add('hidden'); document.getElementById(`tab-${x}`).classList.remove('tab-active'); document.getElementById(`tab-${x}`).classList.add('tab-inactive'); });
+            document.getElementById(`content-${t}`).classList.remove('hidden'); document.getElementById(`tab-${t}`).classList.add('tab-active'); document.getElementById(`tab-${t}`).classList.remove('tab-inactive');
+        }
+
+        function filterStocks(f) {
+            const g = document.getElementById('stock-grid'); g.innerHTML = '';
+            let d = allData;
+            if (f === 'Bullish') { d = allData.filter(x => (x['News_Sentiment'] || '').includes('Bullish')); document.getElementById('page-title').innerText = 'Bullish Opportunities'; }
+            else if (f === 'Bearish') { d = allData.filter(x => (x['News_Sentiment'] || '').includes('Bearish')); document.getElementById('page-title').innerText = 'Bearish Risks'; }
+            else document.getElementById('page-title').innerText = 'Market Overview';
+            d.forEach(s => g.innerHTML += createStockCard(s));
+            lucide.createIcons();
+        }
+
+        async function fetchResults() {
+            try {
+                const r = await fetch('/api/results'); const j = await r.json();
+                if (j.status === 'success') { allData = j.data; document.getElementById('count-all').innerText = allData.length; document.getElementById('count-bullish').innerText = allData.filter(s => (s['News_Sentiment'] || '').includes('Bullish')).length; document.getElementById('count-bearish').innerText = allData.filter(s => (s['News_Sentiment'] || '').includes('Bearish')).length; filterStocks('all'); document.getElementById('view-loading').classList.add('hidden'); document.getElementById('view-empty').classList.add('hidden'); document.getElementById('stock-grid').classList.remove('hidden'); }
+            } catch (e) { console.error(e); }
+        }
+
+        async function startProcessing() {
+            document.getElementById('btn-process').disabled = true; document.getElementById('process-text').innerText = "Running...";
+            document.getElementById('view-empty').classList.add('hidden'); document.getElementById('stock-grid').classList.add('hidden'); document.getElementById('view-loading').classList.remove('hidden');
+            try { const r = await fetch('/api/process', { method: 'POST' }); const j = await r.json(); if (j.status === 'success') fetchResults(); else { alert('Failed: ' + j.message); document.getElementById('view-loading').classList.add('hidden'); document.getElementById('view-empty').classList.remove('hidden'); } } catch (e) { alert('Error: ' + e); document.getElementById('view-loading').classList.add('hidden'); document.getElementById('view-empty').classList.remove('hidden'); } finally { document.getElementById('btn-process').disabled = false; document.getElementById('process-text').innerText = "Run Analysis"; }
+        }
+
+        async function useSampleData() { const r = await fetch('/api/use_sample', { method: 'POST' }); const j = await r.json(); if (j.status === 'success') startProcessing(); }
+        async function clearData() { if (!confirm("Delete all data?")) return; await fetch('/api/clear', { method: 'POST' }); allData = []; document.getElementById('stock-grid').innerHTML = ''; document.getElementById('view-loading').classList.add('hidden'); document.getElementById('view-empty').classList.remove('hidden'); document.getElementById('view-details').classList.add('hidden'); document.getElementById('view-dashboard').classList.remove('hidden'); }
+        async function handleFileSelect(e) {
+            const f = e.target.files; if (!f.length) return;
+            document.getElementById('view-empty').classList.add('hidden'); document.getElementById('view-loading').classList.remove('hidden'); document.getElementById('loading-title').innerText = `Uploading...`;
+            const fd = new FormData(); for (let x of f) fd.append('files[]', x);
+            try { const r = await fetch('/api/upload', { method: 'POST', body: fd }); const j = await r.json(); if (j.status === 'success') startProcessing(); else { alert('Upload Failed'); document.getElementById('view-loading').classList.add('hidden'); document.getElementById('view-empty').classList.remove('hidden'); } } catch (e) { alert('Error'); document.getElementById('view-loading').classList.add('hidden'); document.getElementById('view-empty').classList.remove('hidden'); }
+        }
+
+        // Init
+        fetchResults();
+
+    </script>
+</body>
+
+</html>

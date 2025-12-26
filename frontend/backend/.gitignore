@@ -1,0 +1,32 @@
+# Local configuration (contains API keys)
+config_local.py
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+.venv
+
+# Generated data files
+nifty50_unified_master.xlsx
+nifty50_enriched.xlsx
+nifty50_final_analysis.xlsx
+
+# Uploaded files (except test files)
+datasource/*.xlsx
+!datasource/test_*.xlsx
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+.DS_Store
+
+# Logs
+*.log
