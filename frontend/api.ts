@@ -128,11 +128,11 @@ export const api = {
     try {
       data = JSON.parse(text);
     } catch (e) {
-      throw new Error(`Server Error (${res.status}): ${text.slice(0, 100)}`);
+      throw new Error(`Server Error (${res.status}) at ${res.url}: ${text.slice(0, 100)}`);
     }
 
     if (!res.ok || data.status === 'error') {
-      throw new Error(data.message || `Failed to add to portfolio (${res.status})`);
+      throw new Error(data.message || `Failed to add to portfolio (${res.status}) at ${res.url}`);
     }
     return data;
   },
@@ -152,11 +152,11 @@ export const api = {
     try {
       data = JSON.parse(text);
     } catch (e) {
-      throw new Error(`Server Error (${res.status}): ${text.slice(0, 100)}`);
+      throw new Error(`Server Error (${res.status}) at ${res.url}: ${text.slice(0, 100)}`);
     }
 
     if (!res.ok || data.status === 'error') {
-      throw new Error(data.message || `Failed to remove from portfolio (${res.status})`);
+      throw new Error(data.message || `Failed to remove from portfolio (${res.status}) at ${res.url}`);
     }
     return data;
   },

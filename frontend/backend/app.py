@@ -20,10 +20,22 @@ import generate_insights
 app = Flask(__name__)
 # Enable CORS for all routes (Next.js is on localhost:3000)
 # Enable CORS for Next.js frontend
+# Enable CORS for Next.js frontend
 CORS(
     app,
-    resources={r"/*": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000"]}},
+    resources={r"/*": {"origins": "*"}}, # Allow all origins for debugging
 )
+
+@app.route("/api/debug/routes", methods=["GET"])
+def debug_routes():
+    """List all registered routes"""
+    import urllib
+    output = []
+    for rule in app.url_map.iter_rules():
+        methods = ','.join(rule.methods)
+        line = urllib.parse.unquote("{:50s} {}".format(str(rule), methods))
+        output.append(line)
+    return jsonify({"routes": output})
 
 # Path to datasource (relative to backend/)
 app.config["UPLOAD_FOLDER"] = os.path.join(
