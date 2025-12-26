@@ -1,7 +1,10 @@
 
 import logging
 import json
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
 
 try:
     from Fundamentals.MoneyControl import MoneyControl

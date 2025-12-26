@@ -21,7 +21,10 @@ from datetime import datetime, timedelta
 from typing import Dict, List, Optional, Tuple
 
 import numpy as np
-import pandas as pd
+try:
+    import pandas as pd
+except ImportError:
+    pd = None
 
 logger = logging.getLogger(__name__)
 
