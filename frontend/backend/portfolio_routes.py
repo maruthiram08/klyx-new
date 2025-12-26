@@ -9,7 +9,7 @@ from models import UserPortfolio, db
 portfolio_bp = Blueprint("portfolio", __name__)
 
 
-@portfolio_bp.route("/portfolio", methods=["GET"])
+@portfolio_bp.route("/", methods=["GET"])
 @jwt_required()
 def get_portfolio():
     """Get current user's portfolio (list of stock names)"""
@@ -33,7 +33,7 @@ def get_portfolio():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@portfolio_bp.route("/portfolio/add", methods=["POST"])
+@portfolio_bp.route("/add", methods=["POST"])
 @jwt_required()
 def add_to_portfolio():
     """Add a stock to user's portfolio"""
@@ -71,7 +71,7 @@ def add_to_portfolio():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@portfolio_bp.route("/portfolio/remove", methods=["POST"])
+@portfolio_bp.route("/remove", methods=["POST"])
 @jwt_required()
 def remove_from_portfolio():
     """Remove a stock from user's portfolio"""
@@ -107,7 +107,7 @@ def remove_from_portfolio():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-@portfolio_bp.route("/portfolio/clear", methods=["POST"])
+@portfolio_bp.route("/clear", methods=["POST"])
 @jwt_required()
 def clear_portfolio():
     """Clear user's entire portfolio"""

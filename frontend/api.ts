@@ -103,7 +103,7 @@ export const api = {
   },
 
   getPortfolio: async () => {
-    const res = await fetch(`${API_BASE}/database/portfolio`, {
+    const res = await fetch(`${API_BASE}/portfolio`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
@@ -114,7 +114,7 @@ export const api = {
   },
 
   addToPortfolio: async (stockName: string) => {
-    const res = await fetch(`${API_BASE}/database/portfolio/add`, {
+    const res = await fetch(`${API_BASE}/portfolio/add`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -138,7 +138,7 @@ export const api = {
   },
 
   removeFromPortfolio: async (stockName: string) => {
-    const res = await fetch(`${API_BASE}/database/portfolio/remove`, {
+    const res = await fetch(`${API_BASE}/portfolio/remove`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -162,7 +162,7 @@ export const api = {
   },
 
   clearPortfolio: async () => {
-    const res = await fetch(`${API_BASE}/database/portfolio/clear`, {
+    const res = await fetch(`${API_BASE}/portfolio/clear`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
@@ -184,6 +184,7 @@ export const api = {
   },
 
   migratePortfolio: async () => {
+    // This is in db_routes, so it stays at /database
     const res = await fetch(`${API_BASE}/database/migrate_portfolio`, {
       method: 'POST',
       headers: {

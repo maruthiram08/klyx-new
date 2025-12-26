@@ -51,8 +51,9 @@ try:
     # Register Blueprints
     app.register_blueprint(db_routes)
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
+    app.register_blueprint(db_routes, url_prefix="/api/database")
     app.register_blueprint(screener_bp, url_prefix="/api/screener")
-    app.register_blueprint(portfolio_bp, url_prefix="/api/database")
+    app.register_blueprint(portfolio_bp, url_prefix="/api/portfolio")
     
     # Create tables if they don't exist (for fresh deployments)
     with app.app_context():
