@@ -40,7 +40,7 @@ export default function ScreenerPage() {
 
   const fetchPresets = async () => {
     try {
-      const response = await fetch('http://localhost:5001/api/screener/presets');
+      const response = await fetch('/api/screener/presets');
       const data = await response.json();
 
       if (data.status === 'success') {
@@ -56,7 +56,7 @@ export default function ScreenerPage() {
     setSelectedPreset(presetId);
 
     try {
-      const response = await fetch(`http://localhost:5001/api/screener/preset/${presetId}`);
+      const response = await fetch(`/api/screener/preset/${presetId}`);
       const data = await response.json();
 
       if (data.status === 'success') {

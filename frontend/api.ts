@@ -1,5 +1,6 @@
 
-const API_BASE = 'http://127.0.0.1:5001/api';
+// Use relative path for API calls - this works with Vercel rewrites and Next.js proxy
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
 
 // Helper to map DB response to Frontend Stock type
 const mapDatabaseToFrontend = (item: any): any => {
