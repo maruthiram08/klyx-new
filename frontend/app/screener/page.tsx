@@ -44,7 +44,8 @@ export default function ScreenerPage() {
       const data = await response.json();
 
       if (data.status === 'success') {
-        setPresets(data.presets);
+        const payload = data.data; // API returns payload in 'data' field
+        setPresets(Array.isArray(payload) ? payload : (payload.presets || []));
       }
     } catch (error) {
       console.error('Failed to fetch presets:', error);
@@ -80,8 +81,12 @@ export default function ScreenerPage() {
       const data = await response.json();
 
       if (data.status === 'success') {
-        setResults(data.results.map(sanitizeStock));
-        setMetadata(data.metadata);
+        // API returns data: { results: [], metadata: {} }
+        const payload = data.data;
+        if (payload && payload.results) {
+          setResults(payload.results.map(sanitizeStock));
+          setMetadata(payload.metadata);
+        }
       } else {
         alert(data.message || 'Failed to apply preset');
       }
