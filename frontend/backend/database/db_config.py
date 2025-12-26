@@ -55,6 +55,10 @@ class DatabaseConfig:
 
     def execute_query(self, query: str, params: tuple = None, fetch_one: bool = False):
         """Execute a query and return results"""
+        # Convert SQLite placeholders (?) to Postgres placeholders (%s) if in production
+        if self.is_production and self.postgres_url:
+            query = query.replace("?", "%s")
+
         with self.get_connection() as conn:
             cursor = conn.cursor()
             cursor.execute(query, params or ())
