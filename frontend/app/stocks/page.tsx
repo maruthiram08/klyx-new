@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { api } from '../../api';
 import { Stock } from '../../types';
 import Header from '../../components/Header';
+import ConfirmationModal from '../../components/ConfirmationModal';
 import { Container } from '../../components/ui/Container';
 import { Typography } from '../../components/ui/Typography';
 import { Button } from '../../components/ui/Button';
@@ -65,10 +66,15 @@ export default function StockListPage() {
     fetchPortfolio();
   }, [user]);
 
+  // Error Modal State
+  const [errorModal, setErrorModal] = useState<{ isOpen: boolean; message: string }>({
+    isOpen: false,
+    message: ''
+  });
+
   const togglePortfolio = async (e: React.MouseEvent, stockName: string) => {
     e.stopPropagation(); // Prevent row click
     if (!user) {
-      // Just log, or maybe redirect? For now, silence because alert is annoying.
       console.warn("User not logged in, cannot toggle portfolio");
       router.push('/login');
       return;
@@ -89,7 +95,7 @@ export default function StockListPage() {
       }
     } catch (error: any) {
       console.error('Failed to update portfolio:', error);
-      alert(`Error: ${error.message}`);
+      setErrorModal({ isOpen: true, message: error.message });
     } finally {
       setLoadingPortfolio(null);
     }

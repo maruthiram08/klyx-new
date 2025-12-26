@@ -122,8 +122,18 @@ export const api = {
       },
       body: JSON.stringify({ stock_name: stockName })
     });
-    const data = await res.json();
-    if (!res.ok || data.status === 'error') throw new Error(data.message || 'Failed to add to portfolio');
+
+    let data;
+    const text = await res.text();
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      throw new Error(`Server Error (${res.status}): ${text.slice(0, 100)}`);
+    }
+
+    if (!res.ok || data.status === 'error') {
+      throw new Error(data.message || `Failed to add to portfolio (${res.status})`);
+    }
     return data;
   },
 
@@ -136,8 +146,18 @@ export const api = {
       },
       body: JSON.stringify({ stock_name: stockName })
     });
-    const data = await res.json();
-    if (!res.ok || data.status === 'error') throw new Error(data.message || 'Failed to remove from portfolio');
+
+    let data;
+    const text = await res.text();
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      throw new Error(`Server Error (${res.status}): ${text.slice(0, 100)}`);
+    }
+
+    if (!res.ok || data.status === 'error') {
+      throw new Error(data.message || `Failed to remove from portfolio (${res.status})`);
+    }
     return data;
   },
 
@@ -148,8 +168,18 @@ export const api = {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     });
-    const data = await res.json();
-    if (!res.ok || data.status === 'error') throw new Error(data.message || 'Failed to clear portfolio');
+
+    let data;
+    const text = await res.text();
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      throw new Error(`Server Error (${res.status}): ${text.slice(0, 100)}`);
+    }
+
+    if (!res.ok || data.status === 'error') {
+      throw new Error(data.message || `Failed to clear portfolio (${res.status})`);
+    }
     return data;
   },
 
@@ -160,8 +190,18 @@ export const api = {
         'Authorization': `Bearer ${localStorage.getItem('token')}`
       }
     });
-    const data = await res.json();
-    if (!res.ok || data.status === 'error') throw new Error(data.message || 'Failed to migrate portfolio');
+
+    let data;
+    const text = await res.text();
+    try {
+      data = JSON.parse(text);
+    } catch (e) {
+      throw new Error(`Server Error (${res.status}): ${text.slice(0, 100)}`);
+    }
+
+    if (!res.ok || data.status === 'error') {
+      throw new Error(data.message || `Failed to migrate portfolio (${res.status})`);
+    }
     return data;
   }
 };
