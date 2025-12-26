@@ -145,5 +145,15 @@ export const api = {
       }
     });
     return res.json();
+  },
+
+  migratePortfolio: async () => {
+    const res = await fetch(`${API_BASE}/database/migrate_portfolio`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('token')}`
+      }
+    });
+    return res.json();
   }
 };
