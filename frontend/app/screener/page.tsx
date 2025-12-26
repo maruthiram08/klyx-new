@@ -150,6 +150,7 @@ export default function ScreenerPage() {
 
   return (
     <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
+      <Header />
       {/* Header */}
       <div className="bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800">
         <Container>
