@@ -74,11 +74,12 @@ export const api = {
     return res.json();
   },
 
-  getStocks: async (params?: { limit?: number; offset?: number; sector?: string; min_quality?: number }) => {
+  getStocks: async (params?: { limit?: number; offset?: number; sector?: string; min_quality?: number; search?: string }) => {
     const queryParams = new URLSearchParams();
     if (params?.limit) queryParams.append('limit', params.limit.toString());
     if (params?.offset) queryParams.append('offset', params.offset.toString());
     if (params?.sector) queryParams.append('sector', params.sector);
+    if (params?.search) queryParams.append('search', params.search);
     if (params?.min_quality) queryParams.append('min_quality', params.min_quality.toString());
 
     const res = await fetch(`${API_BASE}/database/stocks?${queryParams.toString()}`);
@@ -98,5 +99,18 @@ export const api = {
       data.data = mapDatabaseToFrontend(data.data);
     }
     return data;
+  },
+
+  getPortfolio: async () => {
+    const res = await fetch(`${API_BASE}/database/portfolio`);
+    if (!res.ok) return { status: 'error', message: 'Failed to fetch portfolio' };
+    return res.json();
+  },
+
+  clearPortfolio: async () => {
+    const res = await fetch(`${API_BASE}/database/portfolio/clear`, {
+      method: 'POST'
+    });
+    return res.json();
   }
 };
