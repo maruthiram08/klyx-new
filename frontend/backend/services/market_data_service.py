@@ -1,14 +1,22 @@
 
 import logging
-from Fundamentals.MoneyControl import MoneyControl
 import json
 import pandas as pd
+
+try:
+    from Fundamentals.MoneyControl import MoneyControl
+except ImportError:
+    MoneyControl = None
 
 logger = logging.getLogger(__name__)
 
 class MarketDataService:
     def __init__(self):
-        self.mc = MoneyControl()
+        if MoneyControl:
+            self.mc = MoneyControl()
+        else:
+            self.mc = None
+            logger.warning("MoneyControl module not available - functionality disabled")
         self.details_cache = {} # Symbol -> Details Dict
 
     def get_moneycontrol_details(self, symbol):
@@ -16,6 +24,9 @@ class MarketDataService:
         Resolves a symbol to its MoneyControl details (ID, URL, etc).
         Returns a dict or None.
         """
+        if not self.mc:
+            return None
+            
         if symbol in self.details_cache:
             return self.details_cache[symbol]
 
@@ -50,6 +61,9 @@ class MarketDataService:
         """
         Returns a list of candidate matches for a symbol, including extracted NSE code.
         """
+        if not self.mc:
+            return []
+
         try:
             import re
             # get_ticker returns (id, list_of_matches)
@@ -80,6 +94,9 @@ class MarketDataService:
         Supports statement_type: 'standalone' or 'consolidated'.
         """
         try:
+            if not self.mc:
+                return {"error": "MoneyControl service unavailable"}
+
             details = self.get_moneycontrol_details(symbol)
             if not details or not details.get('url'):
                 return {"error": "Symbol URL not found in MoneyControl"}
