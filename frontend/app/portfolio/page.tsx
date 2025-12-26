@@ -7,6 +7,7 @@ import Header from "@/components/Header";
 import { Container } from "@/components/ui/Container";
 import { api } from "@/api";
 import { Stock } from "@/types";
+import { useAuth } from "@/contexts/AuthContext";
 
 import ConfirmationModal from "@/components/ConfirmationModal";
 import VerificationModal, { InvalidItem } from "@/components/VerificationModal";
@@ -14,6 +15,7 @@ import { Button } from "@/components/ui/Button";
 import { Trash2, UploadCloud, Play, Loader2 } from "lucide-react";
 
 export default function Home() {
+  const { user, loading: authLoading } = useAuth();
   const [stocks, setStocks] = useState<Stock[]>([]);
   const [selectedStock, setSelectedStock] = useState<Stock | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -27,18 +29,27 @@ export default function Home() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const loadData = async () => {
+    if (!user) {
+      setStocks([]);
+      return;
+    }
+
     setIsLoading(true);
     try {
       // Fetch portfolio from database API
       const portfolioRes = await api.getPortfolio();
 
-      if (portfolioRes.status !== "success" || !portfolioRes.data.stock_names) {
+      console.log("Portfolio API Response:", portfolioRes); // Debug log
+
+      if (portfolioRes.status !== "success" || !portfolioRes.data?.stock_names) {
         setStocks([]);
         setIsLoading(false);
         return;
       }
 
       const stockNames: string[] = portfolioRes.data.stock_names;
+      console.log("Stock names in portfolio:", stockNames); // Debug log
+
       if (stockNames.length === 0) {
         setStocks([]);
         setIsLoading(false);
@@ -63,7 +74,7 @@ export default function Home() {
       const validStocks = stocksData.filter((s): s is Stock => s !== null);
       setStocks(validStocks);
     } catch (e) {
-      console.error(e);
+      console.error("Failed to load portfolio:", e);
       setStocks([]);
     } finally {
       setIsLoading(false);
@@ -71,18 +82,23 @@ export default function Home() {
   };
 
   useEffect(() => {
-    loadData();
+    // Only load data when auth is ready and user is logged in
+    if (!authLoading) {
+      loadData();
+    }
+  }, [user, authLoading]);
 
-    // Listen for portfolio updates from other tabs/pages
+  // Listen for portfolio updates from other tabs/pages
+  useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === "user_portfolio") {
+      if (e.key === "user_portfolio" || e.key === "klyx_access_token") {
         loadData();
       }
     };
 
     window.addEventListener("storage", handleStorageChange);
     return () => window.removeEventListener("storage", handleStorageChange);
-  }, []);
+  }, [user]);
 
   const handleUpload = async (files: FileList) => {
     try {
