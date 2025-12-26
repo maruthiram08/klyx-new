@@ -24,7 +24,16 @@ const [invalidSymbols, setInvalidSymbols] = useState<InvalidItem[]>([]);
 **Error**: `Turbopack build failed with 2 errors... Parsing ecmascript source code failed`.
 **Resolution**: Removed duplicate/garbage code appended to `frontend/components/Header.tsx` that caused syntax errors during build.
 
+### 5. Missing Landing Page (404 Error)
+**Error**: User reported `404 This page could not be found` on root URL. Confirmed `frontend/app/page.tsx` was missing.
+**Resolution**: Created `frontend/app/page.tsx` with a redirect to `/stocks` to ensure users land on a valid page.
+```typescript
+import { redirect } from 'next/navigation';
+export default function Home() {
+  redirect('/stocks');
+}
+```
+
 ## Next Steps
 - Run `npm run build` to confirm all clear. (COMPLETED - SUCCESS)
-- Commit changes.
-
+- Commit changes. (COMPLETED)
