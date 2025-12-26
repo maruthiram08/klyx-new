@@ -20,7 +20,6 @@ export default function Home() {
 
   // Verification State
   const [showVerification, setShowVerification] = useState(false);
-  const [invalidSymbols, setInvalidSymbols] = useState<InvalidItem[]>([]);
 
   // Confirmation State
   const [showClearConfirm, setShowClearConfirm] = useState(false);
