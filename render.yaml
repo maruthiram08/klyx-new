@@ -1,0 +1,39 @@
+services:
+  # Background worker for long-running tasks
+  - type: web
+    name: klyx-worker
+    env: python
+    region: singapore
+    plan: free
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: gunicorn --workers 4 --bind 0.0.0.0:$PORT --timeout 300 --chdir backend worker_app:app
+    envVars:
+      - key: POSTGRES_URL
+        sync: false
+      - key: WORKER_API_KEY
+        generateValue: true
+      - key: VERCEL_API_URL
+        value: https://klyx.vercel.app
+    healthCheckPath: /health
+
+  # Daily price refresh cron job
+  - type: cron
+    name: daily-refresh
+    env: python
+    schedule: "0 2 * * *"
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: python backend/database/enrich_missing_fields.py --refresh-prices
+    envVars:
+      - key: POSTGRES_URL
+        sync: false
+
+  # Weekly full enrichment cron job
+  - type: cron
+    name: weekly-enrichment
+    env: python
+    schedule: "0 3 * * 0"
+    buildCommand: pip install -r backend/requirements.txt
+    startCommand: python backend/database/enrich_missing_fields.py --full
+    envVars:
+      - key: POSTGRES_URL
+        sync: false
