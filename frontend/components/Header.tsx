@@ -2,7 +2,7 @@
 import { useState, useEffect, useRef } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Button } from "./ui/Button";
 import { Container } from "./ui/Container";
 import {
@@ -13,28 +13,22 @@ import {
   Loader2,
   Trash2,
   Filter,
+  LogOut,
+  User,
 } from "lucide-react";
 import { Typography } from "./ui/Typography";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface HeaderProps {
   stockCount?: number;
-  onUpload?: (files: FileList) => void;
-  onRunAnalysis?: () => void;
-  onClearData?: () => void;
-  isProcessing?: boolean;
 }
 
-export default function Header({
-  stockCount = 0,
-  onUpload,
-  onRunAnalysis,
-  onClearData,
-  isProcessing = false,
-}: HeaderProps) {
+export default function Header({ stockCount = 0 }: HeaderProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
   const pathname = usePathname();
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const router = useRouter();
+  const { user, logout, isAuthenticated } = useAuth();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -44,18 +38,18 @@ export default function Header({
     return () => window.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files.length > 0 && onUpload) {
-      onUpload(e.target.files);
-    }
+  const handleLogout = async () => {
+    await logout();
+    router.push("/login");
   };
 
   return (
     <header
-      className={`sticky top-0 z-50 w-full transition-all duration-300 ${scrolled
-        ? "bg-white/80 backdrop-blur-md border-b border-neutral-100"
-        : "bg-transparent"
-        }`}
+      className={`sticky top-0 z-50 w-full transition-all duration-300 ${
+        scrolled
+          ? "bg-white/80 backdrop-blur-md border-b border-neutral-100"
+          : "bg-transparent"
+      }`}
     >
       <Container>
         <div className="flex items-center justify-between py-4">
@@ -78,80 +72,85 @@ export default function Header({
           </Link>
 
           {/* Desktop Actions */}
-          <div className="hidden md:flex items-center gap-4">
-            {/* Hidden File Input */}
-            <input
-              type="file"
-              ref={fileInputRef}
-              onChange={handleFileChange}
-              className="hidden"
-              multiple
-              accept=".xlsx,.xls,.csv"
-            />
-
-            <Link
-              href="/stocks"
-              className={`text-sm font-medium transition-colors flex items-center gap-2 px-3 py-2 rounded-full ${pathname === "/stocks"
-                ? "text-black bg-[#ccf32f]"
-                : "text-neutral-600 hover:text-black hover:bg-neutral-50"
+          <div className="hidden md:flex items-center gap-2">
+            {/* Navigation Links */}
+            <div className="flex items-center bg-neutral-100/50 rounded-full p-1 mr-4 border border-neutral-200/50">
+              <Link
+                href="/dashboard"
+                className={`text-sm font-medium transition-all px-4 py-2 rounded-full ${
+                  pathname === "/dashboard"
+                    ? "bg-white text-black shadow-sm"
+                    : "text-neutral-500 hover:text-black"
                 }`}
-            >
-              Stocks
-            </Link>
-
-            <Link
-              href="/screener"
-              className={`text-sm font-medium transition-colors flex items-center gap-2 px-3 py-2 rounded-full ${pathname === "/screener"
-                ? "text-black bg-[#ccf32f]"
-                : "text-neutral-600 hover:text-black hover:bg-neutral-50"
+              >
+                Dashboard
+              </Link>
+              <Link
+                href="/portfolio"
+                className={`text-sm font-medium transition-all px-4 py-2 rounded-full ${
+                  pathname === "/portfolio"
+                    ? "bg-white text-black shadow-sm"
+                    : "text-neutral-500 hover:text-black"
                 }`}
-            >
-              <Filter size={18} />
-              Screener
-            </Link>
-
-            {onClearData && (
-              <button
-                onClick={onClearData}
-                className="p-2 rounded-full text-neutral-400 hover:text-rose-500 hover:bg-rose-50 transition-colors"
-                title="Clear All Data"
               >
-                <Trash2 size={20} />
-              </button>
-            )}
-
-            <div className="h-6 w-px bg-neutral-200 mx-2"></div>
-
-            {onUpload && (
-              <button
-                onClick={() => fileInputRef.current?.click()}
-                className="text-sm font-medium text-neutral-600 hover:text-black transition-colors flex items-center gap-2 px-3 py-2 rounded-full hover:bg-neutral-50"
+                Portfolio
+              </Link>
+              <Link
+                href="/stocks"
+                className={`text-sm font-medium transition-all px-4 py-2 rounded-full ${
+                  pathname === "/stocks"
+                    ? "bg-white text-black shadow-sm"
+                    : "text-neutral-500 hover:text-black"
+                }`}
               >
-                <UploadCloud size={18} />
-                Upload
-              </button>
-            )}
-
-            {onRunAnalysis && (
-              <Button
-                variant="primary"
-                size="md"
-                onClick={onRunAnalysis}
-                disabled={isProcessing}
-                className="rounded-full shadow-lg shadow-lime-400/20 min-w-[140px]"
+                Stocks
+              </Link>
+              <Link
+                href="/screener"
+                className={`text-sm font-medium transition-all px-4 py-2 rounded-full ${
+                  pathname === "/screener"
+                    ? "bg-white text-black shadow-sm"
+                    : "text-neutral-500 hover:text-black"
+                }`}
               >
-                {isProcessing ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Processing
-                  </>
-                ) : (
-                  <>
-                    <Play className="w-4 h-4 mr-2 fill-current" />
-                    Run Analysis
-                  </>
-                )}
-              </Button>
+                Screener
+              </Link>
+              <Link
+                href="/debt-optimizer"
+                className={`text-sm font-medium transition-all px-4 py-2 rounded-full ${
+                  pathname === "/debt-optimizer"
+                    ? "bg-white text-black shadow-sm"
+                    : "text-neutral-500 hover:text-black"
+                }`}
+              >
+                Debt Optimizer
+              </Link>
+            </div>
+
+            {/* User Menu */}
+            {isAuthenticated && user ? (
+              <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2 px-3 py-2 bg-neutral-100 rounded-full">
+                  <User size={16} className="text-neutral-600" />
+                  <span className="text-sm font-medium text-neutral-700">
+                    {user.name}
+                  </span>
+                </div>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-full hover:bg-neutral-800 transition-all text-sm font-medium"
+                >
+                  <LogOut size={16} />
+                  Logout
+                </button>
+              </div>
+            ) : (
+              <Link
+                href="/login"
+                className="px-4 py-2 bg-black text-white rounded-full font-medium text-sm hover:bg-neutral-800 transition-all"
+              >
+                Login
+              </Link>
             )}
           </div>
 
@@ -170,45 +169,73 @@ export default function Header({
       {isOpen && (
         <div className="md:hidden absolute top-full left-0 w-full bg-white border-b border-neutral-100 p-4 shadow-xl">
           <nav className="flex flex-col space-y-4">
-            <button
-              onClick={() => {
-                fileInputRef.current?.click();
-                setIsOpen(false);
-              }}
-              className="text-lg font-medium text-neutral-600 hover:text-black py-2 flex items-center gap-2"
+            <Link
+              href="/dashboard"
+              className="text-lg font-medium text-neutral-600 hover:text-black py-2"
+              onClick={() => setIsOpen(false)}
             >
-              <UploadCloud size={20} />
-              Upload New Files
-            </button>
-
-            {onClearData && (
-              <button
-                onClick={() => {
-                  if (confirm("Clear all data?")) {
-                    onClearData();
-                    setIsOpen(false);
-                  }
-                }}
-                className="text-lg font-medium text-rose-500 hover:text-rose-700 py-2 flex items-center gap-2"
-              >
-                <Trash2 size={20} />
-                Clear All Data
-              </button>
-            )}
-
-            <div className="h-px bg-neutral-100 my-2"></div>
-
-            <Button
-              variant="primary"
-              fullWidth
-              onClick={() => {
-                onRunAnalysis?.();
-                setIsOpen(false);
-              }}
-              disabled={isProcessing}
+              Dashboard
+            </Link>
+            <Link
+              href="/portfolio"
+              className="text-lg font-medium text-neutral-600 hover:text-black py-2"
+              onClick={() => setIsOpen(false)}
             >
-              {isProcessing ? "Processing..." : "Run Analysis"}
-            </Button>
+              Portfolio
+            </Link>
+            <Link
+              href="/stocks"
+              className="text-lg font-medium text-neutral-600 hover:text-black py-2"
+              onClick={() => setIsOpen(false)}
+            >
+              Stocks
+            </Link>
+            <Link
+              href="/screener"
+              className="text-lg font-medium text-neutral-600 hover:text-black py-2"
+              onClick={() => setIsOpen(false)}
+            >
+              Screener
+            </Link>
+            <Link
+              href="/debt-optimizer"
+              className="text-lg font-medium text-neutral-600 hover:text-black py-2"
+              onClick={() => setIsOpen(false)}
+            >
+              Debt Optimizer
+            </Link>
+
+            {/* User Section */}
+            <div className="pt-4 border-t border-neutral-200">
+              {isAuthenticated && user ? (
+                <>
+                  <div className="flex items-center gap-2 px-3 py-2 bg-neutral-100 rounded-lg mb-3">
+                    <User size={16} className="text-neutral-600" />
+                    <span className="text-sm font-medium text-neutral-700">
+                      {user.name}
+                    </span>
+                  </div>
+                  <button
+                    onClick={() => {
+                      handleLogout();
+                      setIsOpen(false);
+                    }}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-neutral-900 text-white rounded-lg hover:bg-neutral-800 transition-all text-sm font-medium"
+                  >
+                    <LogOut size={16} />
+                    Logout
+                  </button>
+                </>
+              ) : (
+                <Link
+                  href="/login"
+                  className="block text-center px-4 py-2 bg-black text-white rounded-lg font-medium text-sm hover:bg-neutral-800 transition-all"
+                  onClick={() => setIsOpen(false)}
+                >
+                  Login
+                </Link>
+              )}
+            </div>
           </nav>
         </div>
       )}
