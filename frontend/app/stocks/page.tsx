@@ -128,9 +128,19 @@ export default function StockListPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#F8FAFB]">
+    <div className="min-h-screen bg-neutral-50 dark:bg-neutral-950">
       <Header />
-      <div className="py-12">
+
+      <ConfirmationModal
+        isOpen={errorModal.isOpen}
+        title="Error"
+        message={errorModal.message}
+        confirmLabel="OK"
+        onConfirm={() => setErrorModal({ ...errorModal, isOpen: false })}
+        onCancel={() => setErrorModal({ ...errorModal, isOpen: false })}
+      />
+
+      <div className="bg-white dark:bg-neutral-900 border-b border-neutral-200 dark:border-neutral-800">
         <Container>
           <div className="flex justify-between items-end mb-8">
             <div>
