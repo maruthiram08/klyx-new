@@ -201,6 +201,24 @@ export default function Home() {
                 <Trash2 size={20} />
               </button>
 
+              <button
+                onClick={async () => {
+                  if (confirm("Fix Portfolio Database? This will reset your portfolio.")) {
+                    try {
+                      await api.migratePortfolio();
+                      alert("Database repaired. Please re-add stocks.");
+                      window.location.reload();
+                    } catch (e) {
+                      alert("Failed to repair database");
+                    }
+                  }
+                }}
+                className="p-2.5 rounded-full text-neutral-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
+                title="Fix Database Schema"
+              >
+                <span className="text-xs font-bold">FIX DB</span>
+              </button>
+
               <div className="h-6 w-px bg-neutral-300 mx-1"></div>
 
               <label

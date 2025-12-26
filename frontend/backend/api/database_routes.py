@@ -48,6 +48,28 @@ def init_database():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+@db_routes.route("/migrate_portfolio", methods=["POST"])
+def migrate_portfolio():
+    """Drop and recreate user_portfolio table to fix schema mismatch"""
+    try:
+        from models import UserPortfolio, db
+        from sqlalchemy import inspect
+
+        # Check if table exists
+        inspector = inspect(db.engine)
+        if "user_portfolio" in inspector.get_table_names():
+            UserPortfolio.__table__.drop(db.engine)
+        
+        # Create table
+        UserPortfolio.__table__.create(db.engine)
+        
+        return jsonify({"status": "success", "message": "Portfolio table migrated successfully"})
+
+    except Exception as e:
+        logger.error(f"Migration error: {e}")
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 @db_routes.route("/populate", methods=["POST"])
 def populate_stocks():
     """
