@@ -51,6 +51,26 @@ export default function ScreenerPage() {
     }
   };
 
+  // Helper to convert API string numbers to real numbers
+  const sanitizeStock = (stock: any): Stock => {
+    const numericFields = [
+      "Current Price", "Market Capitalization", "PE TTM Price to Earnings",
+      "ROE Annual %", "Data Quality Score", "Day change %",
+      "Month Change %", "Qtr Change %", "1Yr change %",
+      "Day RSI", "Day SMA200", "Day SMA50"
+    ];
+
+    const sanitized = { ...stock };
+
+    numericFields.forEach(field => {
+      if (sanitized[field] && typeof sanitized[field] === 'string') {
+        sanitized[field] = parseFloat(sanitized[field]);
+      }
+    });
+
+    return sanitized;
+  };
+
   const applyPreset = async (presetId: string) => {
     setLoading(true);
     setSelectedPreset(presetId);
@@ -60,7 +80,7 @@ export default function ScreenerPage() {
       const data = await response.json();
 
       if (data.status === 'success') {
-        setResults(data.results);
+        setResults(data.results.map(sanitizeStock));
         setMetadata(data.metadata);
       } else {
         alert(data.message || 'Failed to apply preset');
