@@ -57,7 +57,7 @@ try:
     from portfolio_routes import portfolio_bp
 
     app.register_blueprint(auth_bp, url_prefix="/api/auth")
-    app.register_blueprint(portfolio_bp, url_prefix="/api")
+    app.register_blueprint(portfolio_bp, url_prefix="/api/portfolio")
     app.register_blueprint(debt_optimizer_bp, url_prefix="/api")
 except ImportError as e:
     print(f"Warning: Could not import auth routes: {e}")
