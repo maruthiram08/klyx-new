@@ -31,14 +31,34 @@ app.config["UPLOAD_FOLDER"] = os.path.join(
 )
 os.makedirs(app.config["UPLOAD_FOLDER"], exist_ok=True)
 
-# Register database management routes
+# Register database management routes and Auth
 try:
+    from models import db
+    from auth import auth_bp, bcrypt, jwt
     from api.database_routes import db_routes
+    from api.screener_routes import screener_bp
 
+    # Initialize extensions
+    app.config["SQLALCHEMY_DATABASE_URI"] = os.environ.get("POSTGRES_URL") or "sqlite:///local.db"
+    app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "dev-secret-key")
+    
+    db.init_app(app)
+    bcrypt.init_app(app)
+    jwt.init_app(app)
+
+    # Register Blueprints
     app.register_blueprint(db_routes)
-    print("✓ Database routes registered")
+    app.register_blueprint(auth_bp, url_prefix="/api/auth")
+    app.register_blueprint(screener_bp, url_prefix="/api/screener")
+    
+    # Create tables if they don't exist (for fresh deployments)
+    with app.app_context():
+        db.create_all()
+        
+    print("✓ Routes and Extensions registered")
 except Exception as e:
-    print(f"⚠ Database routes not available: {e}")
+    print(f"⚠ API routes setup failed: {e}")
 
 
 @app.route("/api/upload", methods=["POST"])
