@@ -105,7 +105,7 @@ export const api = {
   getPortfolio: async () => {
     const res = await fetch(`${API_BASE}/portfolio`, {
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': `Bearer ${localStorage.getItem('klyx_access_token')}`
       }
     });
     // Handle 401/403 gracefully if needed, but for now strict check
@@ -118,7 +118,7 @@ export const api = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': `Bearer ${localStorage.getItem('klyx_access_token')}`
       },
       body: JSON.stringify({ stock_name: stockName })
     });
@@ -142,7 +142,7 @@ export const api = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': `Bearer ${localStorage.getItem('klyx_access_token')}`
       },
       body: JSON.stringify({ stock_name: stockName })
     });
@@ -165,7 +165,7 @@ export const api = {
     const res = await fetch(`${API_BASE}/portfolio/clear`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': `Bearer ${localStorage.getItem('klyx_access_token')}`
       }
     });
 
@@ -188,7 +188,7 @@ export const api = {
     const res = await fetch(`${API_BASE}/database/migrate_portfolio`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${localStorage.getItem('token')}`
+        'Authorization': `Bearer ${localStorage.getItem('klyx_access_token')}`
       }
     });
 
