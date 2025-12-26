@@ -21,9 +21,5 @@
       "dest": "/frontend/$1"
     }
   ],
-  "env": {
-    "JWT_SECRET_KEY": "@jwt_secret_key",
-    "CORS_ORIGIN": "https://klyx.vercel.app"
-  },
   "regions": ["bom1"]
 }
