@@ -117,7 +117,6 @@ export default function Home() {
         verifyRes.invalid &&
         verifyRes.invalid.length > 0
       ) {
-        setInvalidSymbols(verifyRes.invalid);
         setShowVerification(true);
         return;
       }
