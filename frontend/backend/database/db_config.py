@@ -18,10 +18,15 @@ class DatabaseConfig:
     """Database configuration manager"""
 
     def __init__(self):
-        self.is_production = os.getenv("VERCEL_ENV") == "production"
-
         # Vercel Postgres connection string
         self.postgres_url = os.getenv("POSTGRES_URL") or os.getenv("DATABASE_URL")
+        
+        # Production if VERCEL_ENV is production OR if POSTGRES_URL is set (for Render)
+        self.is_production = (
+            os.getenv("VERCEL_ENV") == "production" or 
+            os.getenv("RENDER") == "true" or
+            self.postgres_url is not None
+        )
 
         # Local SQLite for development
         self.sqlite_path = os.path.join(os.path.dirname(__file__), "stocks.db")
@@ -29,7 +34,7 @@ class DatabaseConfig:
     @contextmanager
     def get_connection(self):
         """Get database connection (Postgres or SQLite based on environment)"""
-        if self.is_production and self.postgres_url:
+        if self.postgres_url:
             # Production: Use Vercel Postgres
             conn = psycopg2.connect(self.postgres_url, cursor_factory=RealDictCursor)
             try:
