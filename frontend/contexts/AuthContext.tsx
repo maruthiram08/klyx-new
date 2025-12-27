@@ -2,8 +2,9 @@
 
 import React, { createContext, useContext, useState, useEffect } from "react";
 
-// Use relative path for API calls - this works with Vercel rewrites and Next.js proxy
-const API_URL = process.env.NEXT_PUBLIC_API_URL || "/api/auth";
+// Base API URL (without /auth) - auth routes will append /auth
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || "/api";
+const AUTH_URL = API_BASE.endsWith('/auth') ? API_BASE : `${API_BASE}/auth`;
 
 interface User {
   id: string;
@@ -39,7 +40,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const fetchCurrentUser = async (token: string) => {
     try {
-      const response = await fetch(`${API_URL}/me`, {
+      const response = await fetch(`${AUTH_URL}/me`, {
         headers: {
           Authorization: `Bearer ${token}`,
         },
@@ -68,7 +69,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     name: string,
   ): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_URL}/register`, {
+      const response = await fetch(`${AUTH_URL}/register`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -95,7 +96,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_URL}/login`, {
+      const response = await fetch(`${AUTH_URL}/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -124,7 +125,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const token = localStorage.getItem("klyx_access_token");
       if (token) {
-        await fetch(`${API_URL}/logout`, {
+        await fetch(`${AUTH_URL}/logout`, {
           method: "POST",
           headers: {
             Authorization: `Bearer ${token}`,
