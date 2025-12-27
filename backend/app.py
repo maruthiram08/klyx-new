@@ -62,7 +62,15 @@ with app.app_context():
 # Enable CORS
 CORS(
     app,
-    resources={r"/*": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3005"]}},
+    resources={r"/*": {"origins": [
+        "http://localhost:3000", 
+        "http://127.0.0.1:3000", 
+        "http://localhost:3005",
+        "http://localhost:3001",
+        "https://projectklyx.vercel.app",
+        "https://*.vercel.app"
+    ]}},
+    supports_credentials=True,
 )
 
 # Path to datasource (relative to backend/)
