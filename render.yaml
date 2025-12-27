@@ -1,10 +1,11 @@
 services:
-  # Background Worker - Runs continuously for API endpoints
+  # Background Worker API - Runs continuously
   - type: web
     name: klyx-worker
     runtime: python
     region: singapore
     plan: free
+    repo: https://github.com/maruthiram08/klyx-new
     buildCommand: pip install -r frontend/backend/requirements.txt
     startCommand: python frontend/backend/worker_app.py
     healthCheckPath: /health
@@ -20,19 +21,44 @@ services:
       - key: WORKER_API_KEY
         sync: false
 
-# Cron Jobs for scheduled tasks
-crons:
-  # Daily stock price refresh - runs at 6:30 PM IST (1:00 PM UTC) after market close
-  - name: daily-price-refresh
-    schedule: "0 13 * * 1-5"  # Mon-Fri at 1 PM UTC (6:30 PM IST)
-    command: curl -X POST https://klyx-worker.onrender.com/worker/refresh
-    
-  # Weekly full database enrichment - runs Sunday 6 AM IST (12:30 AM UTC)
-  - name: weekly-enrichment
-    schedule: "30 0 * * 0"  # Sunday at 12:30 AM UTC
-    command: curl -X POST https://klyx-worker.onrender.com/worker/enrich -H "Content-Type: application/json" -d '{"batch_size": 100}'
-    
-  # Daily MoneyControl fundamentals sync - runs at 7 PM IST (1:30 PM UTC)
-  - name: daily-fundamentals-sync
-    schedule: "30 13 * * 1-5"  # Mon-Fri at 1:30 PM UTC (7 PM IST)
-    command: curl -X POST https://klyx-worker.onrender.com/worker/sync-fundamentals
+  # Cron Job: Daily stock price refresh - Mon-Fri 6:30 PM IST (1:00 PM UTC)
+  - type: cron
+    name: daily-price-refresh
+    runtime: python
+    region: singapore
+    plan: free
+    repo: https://github.com/maruthiram08/klyx-new
+    schedule: "0 13 * * 1-5"
+    buildCommand: pip install requests
+    startCommand: python -c "import requests; requests.post('https://klyx-worker.onrender.com/worker/refresh')"
+    envVars:
+      - key: WORKER_URL
+        value: https://klyx-worker.onrender.com
+
+  # Cron Job: Weekly enrichment - Sunday 6 AM IST (12:30 AM UTC)
+  - type: cron
+    name: weekly-enrichment
+    runtime: python
+    region: singapore
+    plan: free
+    repo: https://github.com/maruthiram08/klyx-new
+    schedule: "30 0 * * 0"
+    buildCommand: pip install requests
+    startCommand: python -c "import requests; requests.post('https://klyx-worker.onrender.com/worker/enrich', json={'batch_size': 100})"
+    envVars:
+      - key: WORKER_URL
+        value: https://klyx-worker.onrender.com
+
+  # Cron Job: Daily MoneyControl sync - Mon-Fri 7 PM IST (1:30 PM UTC)
+  - type: cron
+    name: daily-fundamentals-sync
+    runtime: python
+    region: singapore
+    plan: free
+    repo: https://github.com/maruthiram08/klyx-new
+    schedule: "30 13 * * 1-5"
+    buildCommand: pip install requests
+    startCommand: python -c "import requests; requests.post('https://klyx-worker.onrender.com/worker/sync-fundamentals')"
+    envVars:
+      - key: WORKER_URL
+        value: https://klyx-worker.onrender.com
