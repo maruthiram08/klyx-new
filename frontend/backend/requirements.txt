@@ -10,5 +10,6 @@ requests
 beautifulsoup4
 
 nsepython
+pkscreener
 psycopg2-binary
 gunicorn
