@@ -1,4 +1,18 @@
 {
+    "crons": [
+        {
+            "path": "/api/cron/refresh",
+            "schedule": "0 13 * * 1-5"
+        },
+        {
+            "path": "/api/cron/enrich",
+            "schedule": "30 0 * * 0"
+        },
+        {
+            "path": "/api/cron/sync",
+            "schedule": "30 13 * * 1-5"
+        }
+    ],
     "rewrites": [
         {
             "source": "/api/(.*)",
