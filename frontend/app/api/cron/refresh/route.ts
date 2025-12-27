@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 
 // Render worker URL - update this after deploying to Render
-const WORKER_URL = process.env.RENDER_WORKER_URL || 'https://klyx-worker.onrender.com';
+const WORKER_URL = process.env.RENDER_WORKER_URL || 'https://klyx-worker-nhlf.onrender.com';
 
 export async function GET(request: Request) {
     // Verify the request is from Vercel Cron

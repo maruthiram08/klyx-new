@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 
-const WORKER_URL = process.env.RENDER_WORKER_URL || 'https://klyx-worker.onrender.com';
+const WORKER_URL = process.env.RENDER_WORKER_URL || 'https://klyx-worker-nhlf.onrender.com';
 
 export async function GET(request: Request) {
     const authHeader = request.headers.get('authorization');
