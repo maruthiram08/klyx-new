@@ -18,10 +18,12 @@ class DatabaseConfig:
     """Database configuration manager"""
 
     def __init__(self):
-        self.is_production = os.getenv("VERCEL_ENV") == "production"
-
         # Vercel Postgres connection string
         self.postgres_url = os.getenv("POSTGRES_URL")
+        
+        # Use PostgreSQL if POSTGRES_URL is set and USE_SQLITE is not explicitly true
+        use_sqlite = os.getenv("USE_SQLITE", "false").lower() == "true"
+        self.is_production = bool(self.postgres_url) and not use_sqlite
 
         # Local SQLite for development
         self.sqlite_path = os.path.join(os.path.dirname(__file__), "stocks.db")
