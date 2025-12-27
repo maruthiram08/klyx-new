@@ -73,6 +73,39 @@ except ImportError as e:
     print(f"Warning: Could not import API routes: {e}")
 
 
+# Debug endpoint for testing
+@app.route("/api/debug/test_search")
+def debug_test_search():
+    """Test stock search functionality"""
+    try:
+        from database.db_config import DatabaseConfig
+        db_config = DatabaseConfig()
+        
+        # Test query
+        query = """
+            SELECT stock_name, nse_code 
+            FROM stocks 
+            WHERE LOWER(stock_name) LIKE LOWER(%s) OR LOWER(nse_code) LIKE LOWER(%s)
+            LIMIT 5
+        """
+        search_term = "%TCS%"
+        results = db_config.execute_query(query, (search_term, search_term))
+        
+        return {
+            "status": "success",
+            "search_term": search_term,
+            "results": results,
+            "count": len(results) if results else 0
+        }
+    except Exception as e:
+        import traceback
+        return {
+            "status": "error", 
+            "message": str(e),
+            "traceback": traceback.format_exc()
+        }
+
+
 # Health check endpoint
 @app.route("/api/health")
 def health():
