@@ -148,6 +148,7 @@ def list_stocks():
         offset = int(request.args.get("offset", 0))
         sector = request.args.get("sector")
         min_quality = int(request.args.get("min_quality", 30))
+        search = request.args.get("search")
 
         # Build query
         where_clauses = [f"data_quality_score >= {min_quality}"]
@@ -156,6 +157,12 @@ def list_stocks():
         if sector:
             where_clauses.append("sector_name = ?")
             params.append(sector)
+
+        if search:
+            # Case-insensitive search on stock_name or nse_code
+            where_clauses.append("(LOWER(stock_name) LIKE LOWER(?) OR LOWER(nse_code) LIKE LOWER(?))")
+            search_term = f"%{search}%"
+            params.extend([search_term, search_term])
 
         where_clause = " AND ".join(where_clauses)
 
