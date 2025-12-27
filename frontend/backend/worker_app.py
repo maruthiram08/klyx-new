@@ -45,6 +45,7 @@ def root():
                 "enrich": "/worker/enrich (POST)",
                 "populate": "/worker/populate (POST)",
                 "refresh": "/worker/refresh (POST)",
+                "sync-fundamentals": "/worker/sync-fundamentals (POST)",
             },
         }
     )
@@ -134,6 +135,91 @@ def refresh_stock_data():
 
     except Exception as e:
         logger.error(f"Refresh failed: {str(e)}", exc_info=True)
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/worker/sync-fundamentals", methods=["POST"])
+def sync_fundamentals():
+    """
+    Sync fundamental data from MoneyControl for all stocks.
+    Updates: P&L, Balance Sheet, Cash Flow, Ratios
+    Can take 30-60 minutes for all stocks.
+    """
+    try:
+        import time
+        from database.db_config import DatabaseConfig
+        from services.market_data_service import market_data_service
+
+        db_config = DatabaseConfig()
+        
+        # Get parameters
+        data = request.json or {}
+        batch_size = data.get("batch_size", 50)
+        offset = data.get("offset", 0)
+
+        logger.info(f"Starting MoneyControl fundamentals sync: batch_size={batch_size}, offset={offset}")
+
+        # Get stocks to sync
+        query = f"""
+            SELECT nse_code, stock_name 
+            FROM stocks 
+            ORDER BY market_cap DESC NULLS LAST
+            LIMIT %s OFFSET %s
+        """
+        stocks = db_config.execute_query(query, (batch_size, offset))
+
+        if not stocks:
+            return jsonify({
+                "status": "success",
+                "message": "No stocks to sync",
+                "data": {"synced": 0, "failed": 0}
+            })
+
+        synced = 0
+        failed = 0
+        results = []
+
+        for stock in stocks:
+            nse_code = stock["nse_code"]
+            try:
+                logger.info(f"Fetching fundamentals for {nse_code}...")
+                
+                # Fetch fundamentals from MoneyControl
+                fundamentals = market_data_service.get_fundamentals(nse_code)
+                
+                if "error" not in fundamentals:
+                    synced += 1
+                    results.append({"stock": nse_code, "status": "success"})
+                    logger.info(f"✅ Synced {nse_code}")
+                else:
+                    failed += 1
+                    results.append({"stock": nse_code, "status": "failed", "error": fundamentals.get("error")})
+                    logger.warning(f"⚠️ Failed to sync {nse_code}: {fundamentals.get('error')}")
+
+                # Rate limiting - don't hammer MoneyControl
+                time.sleep(2)
+
+            except Exception as e:
+                failed += 1
+                results.append({"stock": nse_code, "status": "error", "error": str(e)})
+                logger.error(f"❌ Error syncing {nse_code}: {e}")
+
+        logger.info(f"Fundamentals sync complete: {synced} synced, {failed} failed")
+
+        return jsonify({
+            "status": "success",
+            "message": f"Fundamentals sync completed: {synced} synced, {failed} failed",
+            "data": {
+                "synced": synced,
+                "failed": failed,
+                "batch_size": batch_size,
+                "offset": offset,
+                "details": results[:10]  # Only return first 10 for brevity
+            }
+        })
+
+    except Exception as e:
+        logger.error(f"Fundamentals sync failed: {str(e)}", exc_info=True)
         return jsonify({"status": "error", "message": str(e)}), 500
 
 

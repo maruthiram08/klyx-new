@@ -1,13 +1,38 @@
 services:
-  - type: worker
+  # Background Worker - Runs continuously for API endpoints
+  - type: web
     name: klyx-worker
-    env: python
+    runtime: python
+    region: singapore
+    plan: free
     buildCommand: pip install -r frontend/backend/requirements.txt
     startCommand: python frontend/backend/worker_app.py
+    healthCheckPath: /health
     envVars:
+      - key: POSTGRES_URL
+        sync: false
       - key: DATABASE_URL
         sync: false
       - key: GOOGLE_API_KEY
         sync: false
       - key: ALPHA_VANTAGE_API_KEY
         sync: false
+      - key: WORKER_API_KEY
+        sync: false
+
+# Cron Jobs for scheduled tasks
+crons:
+  # Daily stock price refresh - runs at 6:30 PM IST (1:00 PM UTC) after market close
+  - name: daily-price-refresh
+    schedule: "0 13 * * 1-5"  # Mon-Fri at 1 PM UTC (6:30 PM IST)
+    command: curl -X POST https://klyx-worker.onrender.com/worker/refresh
+    
+  # Weekly full database enrichment - runs Sunday 6 AM IST (12:30 AM UTC)
+  - name: weekly-enrichment
+    schedule: "30 0 * * 0"  # Sunday at 12:30 AM UTC
+    command: curl -X POST https://klyx-worker.onrender.com/worker/enrich -H "Content-Type: application/json" -d '{"batch_size": 100}'
+    
+  # Daily MoneyControl fundamentals sync - runs at 7 PM IST (1:30 PM UTC)
+  - name: daily-fundamentals-sync
+    schedule: "30 13 * * 1-5"  # Mon-Fri at 1:30 PM UTC (7 PM IST)
+    command: curl -X POST https://klyx-worker.onrender.com/worker/sync-fundamentals
