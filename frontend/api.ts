@@ -1,6 +1,7 @@
 
 // Use relative path for API calls - this works with Vercel rewrites and Next.js proxy
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
+const AI_API_BASE = process.env.NEXT_PUBLIC_AI_API_URL || 'http://localhost:8000/api/ai';
 
 // Helper to map DB response to Frontend Stock type
 const mapDatabaseToFrontend = (item: any): any => {
@@ -204,5 +205,41 @@ export const api = {
       throw new Error(data.message || `Failed to migrate portfolio (${res.status})`);
     }
     return data;
+  },
+
+  chatWithAI: async (message: string, threadId: string, onToken: (token: string) => void) => {
+    const response = await fetch(`${AI_API_BASE}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        prompt: { role: 'user', content: message },
+        threadId: threadId
+      })
+    });
+
+    if (!response.ok) throw new Error('AI Chat failed');
+
+    const reader = response.body?.getReader();
+    if (!reader) return;
+
+    const decoder = new TextDecoder();
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      const chunk = decoder.decode(value);
+      const lines = chunk.split('\n');
+      for (const line of lines) {
+        if (line.startsWith('data: ')) {
+          const dataStr = line.replace('data: ', '');
+          if (dataStr === '[DONE]') break;
+          try {
+            const data = JSON.parse(dataStr);
+            if (data.content) onToken(data.content);
+          } catch (e) {
+            // Some lines might be tool statuses or incomplete JSON
+          }
+        }
+      }
+    }
   }
 };

@@ -22,6 +22,10 @@ class Config:
     # Get free API key at: https://www.alphavantage.co/support/#api-key
     ALPHA_VANTAGE_API_KEY = os.getenv("ALPHA_VANTAGE_API_KEY", None)
 
+    # OpenAI API Key (required for AI Assistant)
+    OPENAI_API_KEY = os.getenv("OPENAI_API_KEY", None)
+    OPENAI_MODEL = os.getenv("OPENAI_MODEL", "gpt-4o")
+
     # Twelve Data API (optional)
     # Get free API key at: https://twelvedata.com/pricing
     TWELVE_DATA_API_KEY = os.getenv("TWELVE_DATA_API_KEY", None)
