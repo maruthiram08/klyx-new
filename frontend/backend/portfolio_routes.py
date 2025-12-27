@@ -10,7 +10,7 @@ portfolio_bp = Blueprint("portfolio", __name__)
 portfolio_bp.strict_slashes = False  # Prevent redirect loop
 
 
-@portfolio_bp.route("", methods=["GET"])
+@portfolio_bp.route("/list", methods=["GET"])
 @jwt_required()
 def get_portfolio():
     """Get current user's portfolio (list of stock names)"""

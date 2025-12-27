@@ -103,7 +103,7 @@ export const api = {
   },
 
   getPortfolio: async () => {
-    const res = await fetch(`${API_BASE}/portfolio`, {
+    const res = await fetch(`${API_BASE}/portfolio/list`, {
       headers: {
         'Authorization': `Bearer ${localStorage.getItem('klyx_access_token')}`
       }
