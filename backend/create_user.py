@@ -5,7 +5,7 @@ Creates a user directly in the database to bypass API/Frontend issues.
 
 import os
 import uuid
-import psycopg2
+import sqlite3
 from flask import Flask
 from flask_bcrypt import Bcrypt
 from datetime import datetime
@@ -19,20 +19,19 @@ except ImportError:
 
 def create_user():
     print("="*60)
-    print("  Klyx - Manual User Registration")
+    print("  Klyx - Manual User Registration (SQLite)")
     print("="*60)
 
-    postgres_url = os.environ.get("POSTGRES_URL")
-    if not postgres_url:
-        print("❌ POSTGRES_URL not found")
-        return
+    # Database path
+    db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "database", "stocks.db")
+    print(f"Database: {db_path}")
 
-    email = "mnvmaruthiram@gmail.com"
-    name = "Maruthi Ram" # Default name
-    password = "password123" # Temporary password
+    email = "test@example.com"
+    name = "Test User"
+    password = "password123"
 
     print(f"Creating user: {email}")
-    print(f"Temporary Password: {password}")
+    print(f"Password: {password}")
 
     # Hash password
     app = Flask(__name__)
@@ -41,24 +40,24 @@ def create_user():
     user_id = str(uuid.uuid4())
 
     try:
-        conn = psycopg2.connect(postgres_url)
+        conn = sqlite3.connect(db_path)
         cur = conn.cursor()
 
-        # Check if exists (double check)
-        cur.execute("SELECT id FROM users WHERE email = %s", (email,))
+        # Check if exists
+        cur.execute("SELECT id FROM users WHERE email = ?", (email,))
         if cur.fetchone():
-            print("❌ User already exists in DB!")
-            conn.close()
-            return
-
-        # Insert
-        cur.execute("""
-            INSERT INTO users (id, email, name, password_hash, created_at, updated_at)
-            VALUES (%s, %s, %s, %s, %s, %s)
-        """, (user_id, email, name, pw_hash, datetime.utcnow(), datetime.utcnow()))
+            print("❌ User already exists! Updating password...")
+            cur.execute("UPDATE users SET password_hash = ? WHERE email = ?", (pw_hash, email))
+            print("✅ Password updated.")
+        else:
+            # Insert
+            cur.execute("""
+                INSERT INTO users (id, email, name, password_hash, created_at, updated_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (user_id, email, name, pw_hash, datetime.utcnow(), datetime.utcnow()))
+            print("✅ User created successfully!")
         
         conn.commit()
-        print("✅ User created successfully!")
         conn.close()
 
     except Exception as e:

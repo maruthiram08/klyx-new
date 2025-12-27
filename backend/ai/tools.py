@@ -124,5 +124,40 @@ def search_stocks(query: str):
     except Exception as e:
         return {"error": str(e)}
 
+@tool
+def get_stock_history(ticker: str, period: str = "6mo"):
+    """
+    Fetches historical price data for charting.
+    Period options: 1mo, 3mo, 6mo, 1y, 2y, 5y, ytd, max.
+    Returns a list of data points suitable for the 'chart' UI component.
+    """
+    try:
+        stock = yf.Ticker(ticker)
+        # Get history with auto-adjustment
+        hist = stock.history(period=period)
+        
+        if hist.empty:
+            return {"error": f"No history found for {ticker}"}
+            
+        # Resample to limit data points (approx 50-100 points max for efficiency)
+        if len(hist) > 100:
+            hist = hist.iloc[::len(hist)//50]
+            
+        points = []
+        for date, row in hist.iterrows():
+            points.append({
+                "time": date.strftime("%Y-%m-%d"),
+                "value": round(row['Close'], 2)
+            })
+            
+        return {
+            "symbol": ticker,
+            "period": period,
+            "points": points
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
 # Export all tools
-tools = [get_stock_price, get_technical_analysis, get_stock_news, get_fundamentals, search_stocks]
+# Export all tools
+tools = [get_stock_price, get_technical_analysis, get_stock_news, get_fundamentals, search_stocks, get_stock_history]

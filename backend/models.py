@@ -117,3 +117,62 @@ class DebtScenario(db.Model):
             "createdAt": self.created_at.isoformat() if self.created_at else None,
             "updatedAt": self.updated_at.isoformat() if self.updated_at else None,
         }
+
+
+class ChatThread(db.Model):
+    """Chat threads for AI sessions"""
+
+    __tablename__ = "chat_threads"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    user_id = db.Column(
+        db.String(36), db.ForeignKey("users.id"), nullable=False, index=True
+    )
+    title = db.Column(db.String(255), nullable=False, default="New Analysis")
+    is_archived = db.Column(db.Boolean, default=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(
+        db.DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+    # Relationships
+    user = db.relationship("User", backref="chat_threads")
+    messages = db.relationship(
+        "ChatMessage", back_populates="thread", cascade="all, delete-orphan"
+    )
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "userId": self.user_id,
+            "title": self.title,
+            "isArchived": self.is_archived,
+            "createdAt": self.created_at.isoformat() if self.created_at else None,
+            "updatedAt": self.updated_at.isoformat() if self.updated_at else None,
+        }
+
+
+class ChatMessage(db.Model):
+    """Individual messages within a chat thread"""
+
+    __tablename__ = "chat_messages"
+
+    id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
+    thread_id = db.Column(
+        db.String(36), db.ForeignKey("chat_threads.id"), nullable=False, index=True
+    )
+    role = db.Column(db.String(20), nullable=False)  # 'user' or 'assistant'
+    content = db.Column(db.Text, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationship to thread
+    thread = db.relationship("ChatThread", back_populates="messages")
+
+    def to_dict(self):
+        return {
+            "id": self.id,
+            "threadId": self.thread_id,
+            "role": self.role,
+            "content": self.content,
+            "createdAt": self.created_at.isoformat() if self.created_at else None,
+        }

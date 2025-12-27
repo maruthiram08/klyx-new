@@ -45,11 +45,10 @@ export default function Header({ stockCount = 0 }: HeaderProps) {
 
   return (
     <header
-      className={`sticky top-0 z-50 w-full transition-all duration-300 ${
-        scrolled
-          ? "bg-white/80 backdrop-blur-md border-b border-neutral-100"
-          : "bg-transparent"
-      }`}
+      className={`sticky top-0 z-50 w-full transition-all duration-300 ${scrolled
+        ? "bg-white/80 backdrop-blur-md border-b border-neutral-100"
+        : "bg-transparent"
+        }`}
     >
       <Container>
         <div className="flex items-center justify-between py-4">
@@ -77,53 +76,57 @@ export default function Header({ stockCount = 0 }: HeaderProps) {
             <div className="flex items-center bg-neutral-100/50 rounded-full p-1 mr-4 border border-neutral-200/50">
               <Link
                 href="/dashboard"
-                className={`text-sm font-medium transition-all px-4 py-2 rounded-full ${
-                  pathname === "/dashboard"
-                    ? "bg-white text-black shadow-sm"
-                    : "text-neutral-500 hover:text-black"
-                }`}
+                className={`text-sm font-medium transition-all px-4 py-2 rounded-full ${pathname === "/dashboard"
+                  ? "bg-white text-black shadow-sm"
+                  : "text-neutral-500 hover:text-black"
+                  }`}
               >
                 Dashboard
               </Link>
               <Link
                 href="/portfolio"
-                className={`text-sm font-medium transition-all px-4 py-2 rounded-full ${
-                  pathname === "/portfolio"
-                    ? "bg-white text-black shadow-sm"
-                    : "text-neutral-500 hover:text-black"
-                }`}
+                className={`text-sm font-medium transition-all px-4 py-2 rounded-full ${pathname === "/portfolio"
+                  ? "bg-white text-black shadow-sm"
+                  : "text-neutral-500 hover:text-black"
+                  }`}
               >
                 Portfolio
               </Link>
               <Link
                 href="/stocks"
-                className={`text-sm font-medium transition-all px-4 py-2 rounded-full ${
-                  pathname === "/stocks"
-                    ? "bg-white text-black shadow-sm"
-                    : "text-neutral-500 hover:text-black"
-                }`}
+                className={`text-sm font-medium transition-all px-4 py-2 rounded-full ${pathname === "/stocks"
+                  ? "bg-white text-black shadow-sm"
+                  : "text-neutral-500 hover:text-black"
+                  }`}
               >
                 Stocks
               </Link>
               <Link
                 href="/screener"
-                className={`text-sm font-medium transition-all px-4 py-2 rounded-full ${
-                  pathname === "/screener"
-                    ? "bg-white text-black shadow-sm"
-                    : "text-neutral-500 hover:text-black"
-                }`}
+                className={`text-sm font-medium transition-all px-4 py-2 rounded-full ${pathname === "/screener"
+                  ? "bg-white text-black shadow-sm"
+                  : "text-neutral-500 hover:text-black"
+                  }`}
               >
                 Screener
               </Link>
               <Link
                 href="/debt-optimizer"
-                className={`text-sm font-medium transition-all px-4 py-2 rounded-full ${
-                  pathname === "/debt-optimizer"
-                    ? "bg-white text-black shadow-sm"
-                    : "text-neutral-500 hover:text-black"
-                }`}
+                className={`text-sm font-medium transition-all px-4 py-2 rounded-full ${pathname === "/debt-optimizer"
+                  ? "bg-white text-black shadow-sm"
+                  : "text-neutral-500 hover:text-black"
+                  }`}
               >
                 Debt Optimizer
+              </Link>
+              <Link
+                href="/ask-klyx"
+                className={`text-sm font-bold transition-all px-4 py-2 rounded-full ${pathname === "/ask-klyx"
+                  ? "bg-[#ccf32f] text-black shadow-sm"
+                  : "text-neutral-500 hover:text-black"
+                  }`}
+              >
+                Ask Klyx
               </Link>
             </div>
 
@@ -203,6 +206,13 @@ export default function Header({ stockCount = 0 }: HeaderProps) {
               onClick={() => setIsOpen(false)}
             >
               Debt Optimizer
+            </Link>
+            <Link
+              href="/ask-klyx"
+              className="text-lg font-bold text-neutral-600 hover:text-black py-2"
+              onClick={() => setIsOpen(false)}
+            >
+              Ask Klyx
             </Link>
 
             {/* User Section */}

@@ -20,9 +20,14 @@ class MarketDataService:
             return self.details_cache[symbol]
 
         try:
-            logger.info(f"Searching MoneyControl for symbol: {symbol}")
+            # Strip common suffixes for search
+            search_symbol = symbol.split('.')[0]
+            if search_symbol.endswith('.NS') or search_symbol.endswith('.BO'):
+                 search_symbol = search_symbol[:-3]
+            
+            logger.info(f"Searching MoneyControl for symbol: {search_symbol} (original: {symbol})")
             # get_ticker returns tuple: (id, data_list)
-            search_res = self.mc.get_ticker(symbol)
+            search_res = self.mc.get_ticker(search_symbol)
             
             if search_res and isinstance(search_res, tuple) and len(search_res) > 1 and search_res[1]:
                 # Extract first match

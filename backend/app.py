@@ -7,6 +7,12 @@ import numpy as np
 import pandas as pd
 from flask import Flask, jsonify, request
 from flask_cors import CORS
+from dotenv import load_dotenv
+
+# Load environment variables from project root
+env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env.local")
+load_dotenv(env_path)
+load_dotenv()
 
 # Add current directory to path so imports work
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -18,11 +24,45 @@ import enrich_data
 import generate_insights
 
 app = Flask(__name__)
-# Enable CORS for all routes (Next.js is on localhost:3000)
-# Enable CORS for Next.js frontend
+
+# Configure Database
+# USE_SQLITE=true forces local database even if POSTGRES_URL is set
+use_sqlite = os.environ.get("USE_SQLITE", "false").lower() == "true"
+postgres_url = os.environ.get("POSTGRES_URL") if not use_sqlite else None
+
+if postgres_url:
+    if postgres_url.startswith("postgres://"):
+        postgres_url = postgres_url.replace("postgres://", "postgresql://", 1)
+    app.config["SQLALCHEMY_DATABASE_URI"] = postgres_url
+    print("✓ Using PostgreSQL database")
+else:
+    db_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "database", "stocks.db")
+    app.config["SQLALCHEMY_DATABASE_URI"] = f"sqlite:///{db_path}"
+    print(f"✓ Using SQLite database: {db_path}")
+
+app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "super-secret-key-change-me")
+
+# Import models & extensions
+from models import db
+from auth import auth_bp, bcrypt, jwt
+from portfolio_routes import portfolio_bp
+from debt_optimizer_routes import debt_optimizer_bp
+from chat_routes import chat_bp
+
+# Initialize extensions
+db.init_app(app)
+bcrypt.init_app(app)
+jwt.init_app(app)
+
+# Create tables
+with app.app_context():
+    db.create_all()
+
+# Enable CORS
 CORS(
     app,
-    resources={r"/*": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000"]}},
+    resources={r"/*": {"origins": ["http://localhost:3000", "http://127.0.0.1:3000", "http://localhost:3005"]}},
 )
 
 # Path to datasource (relative to backend/)
@@ -36,9 +76,13 @@ try:
     from api.database_routes import db_routes
 
     app.register_blueprint(db_routes)
-    print("✓ Database routes registered")
+    app.register_blueprint(auth_bp, url_prefix="/api/auth")
+    app.register_blueprint(portfolio_bp, url_prefix="/api")
+    app.register_blueprint(debt_optimizer_bp, url_prefix="/api")
+    app.register_blueprint(chat_bp, url_prefix="/api")
+    print("✓ All blueprints registered")
 except Exception as e:
-    print(f"⚠ Database routes not available: {e}")
+    print(f"⚠ Blueprint registration failed: {e}")
 
 
 @app.route("/api/upload", methods=["POST"])
@@ -489,52 +533,9 @@ def get_field_stats(field_name):
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
-if __name__ == "__main__":
-    app.run(debug=True, port=5001)
-
-        screener = create_screener("nifty50_final_analysis.xlsx")
-
-        if not screener:
-            return jsonify(
-                {
-                    "status": "error",
-                    "message": "No data available. Run processing first.",
-                }
-            ), 404
-
-        fields = screener.get_available_fields()
-
-        return jsonify({"status": "success", "fields": fields})
-
-    except Exception as e:
-        import traceback
-
-        traceback.print_exc()
-        return jsonify({"status": "error", "message": str(e)}), 500
-
-
-@app.route("/api/screener/field/<path:field_name>/stats", methods=["GET"])
-def get_field_stats(field_name):
-    """Get statistics for a specific field"""
-    try:
-        from services.screener_service import create_screener
-
-        screener = create_screener("nifty50_final_analysis.xlsx")
-
-        if not screener:
-            return jsonify({"status": "error", "message": "No data available"}), 404
-
-        stats = screener.get_field_stats(field_name)
-
-        if not stats:
-            return jsonify(
-                {"status": "error", "message": f"Field '{field_name}' not found"}
-            ), 404
-
-        return jsonify({"status": "success", "stats": stats})
-
-    except Exception as e:
-        return jsonify({"status": "error", "message": str(e)}), 500
+@app.route("/api/health", methods=["GET"])
+def health_check():
+    return jsonify({"status": "ok"})
 
 
 if __name__ == "__main__":

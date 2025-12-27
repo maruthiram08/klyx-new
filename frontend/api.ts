@@ -1,7 +1,7 @@
 
 // Use relative path for API calls - this works with Vercel rewrites and Next.js proxy
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '/api';
-const AI_API_BASE = process.env.NEXT_PUBLIC_AI_API_URL || 'http://localhost:8000/api/ai';
+const AI_API_BASE = process.env.NEXT_PUBLIC_AI_API_URL || '/api/ai';
 
 // Helper to map DB response to Frontend Stock type
 const mapDatabaseToFrontend = (item: any): any => {
@@ -207,19 +207,81 @@ export const api = {
     return data;
   },
 
-  chatWithAI: async (message: string, threadId: string, onToken: (token: string) => void) => {
-    const response = await fetch(`${AI_API_BASE}/chat`, {
+  // --- Chat & AI Session Management ---
+
+  getChatThreads: async () => {
+    console.log('DEBUG: Fetching chat threads from', `${API_BASE}/chat/threads`);
+    const token = localStorage.getItem('klyx_access_token');
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const res = await fetch(`${API_BASE}/chat/threads`, { headers });
+    const data = await res.json();
+    console.log('DEBUG: getChatThreads response:', data);
+    return data;
+  },
+
+  createChatThread: async (title?: string) => {
+    const res = await fetch(`${API_BASE}/chat/threads`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('klyx_access_token')}`
+      },
+      body: JSON.stringify({ title })
+    });
+    return res.json();
+  },
+
+  getChatHistory: async (threadId: string) => {
+    const token = localStorage.getItem('klyx_access_token');
+    const headers: Record<string, string> = {};
+    if (token) {
+      headers['Authorization'] = `Bearer ${token}`;
+    }
+    const res = await fetch(`${API_BASE}/chat/threads/${threadId}`, { headers });
+    return res.json();
+  },
+
+  deleteChatThread: async (threadId: string) => {
+    const res = await fetch(`${API_BASE}/chat/threads/${threadId}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('klyx_access_token')}`
+      }
+    });
+    return res.json();
+  },
+
+  renameChatThread: async (threadId: string, title: string) => {
+    const res = await fetch(`${API_BASE}/chat/threads/${threadId}`, {
+      method: 'PATCH',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('klyx_access_token')}`
+      },
+      body: JSON.stringify({ title })
+    });
+    return res.json();
+  },
+
+  chatWithAI: async (message: string, threadId: string, onToken: (token: string) => void) => {
+    const res = await fetch(`${AI_API_BASE}/chat`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${localStorage.getItem('klyx_access_token')}`
+      },
       body: JSON.stringify({
         prompt: { role: 'user', content: message },
         threadId: threadId
       })
     });
 
-    if (!response.ok) throw new Error('AI Chat failed');
+    if (!res.ok) throw new Error('AI Chat failed');
 
-    const reader = response.body?.getReader();
+    const reader = res.body?.getReader();
     if (!reader) return;
 
     const decoder = new TextDecoder();

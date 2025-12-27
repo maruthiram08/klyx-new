@@ -108,11 +108,15 @@ def login():
 
         email = data["email"].lower().strip()
         password = data["password"]
+        
+        print(f"DEBUG: Login attempt for {email}")
 
         # Find user
         user = User.query.filter_by(email=email).first()
+        print(f"DEBUG: User found: {user}")
 
         if not user or not bcrypt.check_password_hash(user.password_hash, password):
+            print("DEBUG: Password check failed")
             return jsonify(
                 {"status": "error", "message": "Invalid email or password"}
             ), 401
