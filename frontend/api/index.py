@@ -106,6 +106,38 @@ def debug_test_search():
         }
 
 
+@app.route("/api/debug/portfolio")
+def debug_portfolio():
+    """Debug portfolio data - shows all portfolio entries"""
+    try:
+        from models import UserPortfolio, db
+        
+        # Get all portfolio entries (for debugging)
+        all_entries = UserPortfolio.query.all()
+        
+        entries_list = []
+        for entry in all_entries:
+            entries_list.append({
+                "id": entry.id,
+                "user_id": entry.user_id[:8] + "...",  # Truncate for privacy
+                "stock_name": entry.stock_name,
+                "added_at": entry.added_at.isoformat() if entry.added_at else None
+            })
+        
+        return {
+            "status": "success",
+            "total_entries": len(entries_list),
+            "entries": entries_list
+        }
+    except Exception as e:
+        import traceback
+        return {
+            "status": "error",
+            "message": str(e),
+            "traceback": traceback.format_exc()
+        }
+
+
 # Health check endpoint
 @app.route("/api/health")
 def health():
