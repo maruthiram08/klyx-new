@@ -151,12 +151,11 @@ def refresh_daily_prices():
     """
     logger.info("Starting daily price refresh...")
 
-    # Get all stocks
+    # Get all stocks (ordered by market cap so most important stocks are refreshed first)
     query = """
         SELECT id, nse_code, stock_name
         FROM stocks
         ORDER BY market_cap DESC NULLS LAST
-        LIMIT 100
     """
 
     stocks = db_config.execute_query(query)
