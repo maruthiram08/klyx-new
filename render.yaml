@@ -1,4 +1,42 @@
 services:
+  # Main Flask Backend API
+  - type: web
+    name: klyx-backend
+    runtime: python
+    region: singapore
+    plan: free
+    repo: https://github.com/maruthiram08/klyx-new
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn app:app --bind 0.0.0.0:$PORT
+    healthCheckPath: /health
+    envVars:
+      - key: POSTGRES_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+
+  # AI FastAPI Service
+  - type: web
+    name: klyx-ai
+    runtime: python
+    region: singapore
+    plan: free
+    repo: https://github.com/maruthiram08/klyx-new
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn ai_api:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/ai/health
+    envVars:
+      - key: POSTGRES_URL
+        sync: false
+      - key: JWT_SECRET_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+
   # Background Worker API - Runs continuously
   - type: web
     name: klyx-worker
