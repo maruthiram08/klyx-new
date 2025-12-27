@@ -8,8 +8,6 @@ yfinance
 openpyxl
 requests
 beautifulsoup4
-pkscreener
-nsepython
 psycopg2-binary
 gunicorn
 langchain
@@ -18,3 +16,4 @@ langchain-openai
 fastapi
 uvicorn
 python-dotenv
+PyJWT
