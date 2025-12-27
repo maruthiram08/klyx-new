@@ -7,9 +7,10 @@ from flask_jwt_extended import get_jwt_identity, jwt_required
 from models import UserPortfolio, db
 
 portfolio_bp = Blueprint("portfolio", __name__)
+portfolio_bp.strict_slashes = False  # Prevent redirect loop
 
 
-@portfolio_bp.route("/", methods=["GET"])
+@portfolio_bp.route("", methods=["GET"])
 @jwt_required()
 def get_portfolio():
     """Get current user's portfolio (list of stock names)"""
