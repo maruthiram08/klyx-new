@@ -29,7 +29,12 @@ export default function Home() {
   const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const loadData = async () => {
+    console.log("=== Portfolio loadData START ===");
+    console.log("User:", user);
+    console.log("Auth Loading:", authLoading);
+
     if (!user) {
+      console.log("No user, clearing stocks");
       setStocks([]);
       return;
     }
@@ -37,29 +42,42 @@ export default function Home() {
     setIsLoading(true);
     try {
       // Fetch portfolio from database API
+      console.log("Fetching portfolio...");
       const portfolioRes = await api.getPortfolio();
 
-      console.log("Portfolio API Response:", portfolioRes); // Debug log
+      console.log("Portfolio API Response:", JSON.stringify(portfolioRes, null, 2));
 
-      if (portfolioRes.status !== "success" || !portfolioRes.data?.stock_names) {
+      if (portfolioRes.status !== "success") {
+        console.log("Portfolio status not success:", portfolioRes.status);
+        setStocks([]);
+        setIsLoading(false);
+        return;
+      }
+
+      if (!portfolioRes.data?.stock_names) {
+        console.log("No stock_names in response data:", portfolioRes.data);
         setStocks([]);
         setIsLoading(false);
         return;
       }
 
       const stockNames: string[] = portfolioRes.data.stock_names;
-      console.log("Stock names in portfolio:", stockNames); // Debug log
+      console.log("Stock names in portfolio:", stockNames);
 
       if (stockNames.length === 0) {
+        console.log("Stock names array is empty");
         setStocks([]);
         setIsLoading(false);
         return;
       }
 
       // Fetch stock details for each stock name from the database
+      console.log("Fetching details for each stock...");
       const stockPromises = stockNames.map(async (stockName) => {
         try {
+          console.log(`Searching for: ${stockName}`);
           const res = await api.getStocks({ search: stockName, limit: 1 });
+          console.log(`Search result for ${stockName}:`, res?.data?.length || 0, "stocks found");
           if (res && res.status === "success" && res.data.length > 0) {
             return res.data[0];
           }
@@ -72,17 +90,20 @@ export default function Home() {
 
       const stocksData = await Promise.all(stockPromises);
       const validStocks = stocksData.filter((s): s is Stock => s !== null);
+      console.log("Valid stocks found:", validStocks.length);
       setStocks(validStocks);
     } catch (e) {
       console.error("Failed to load portfolio:", e);
       setStocks([]);
     } finally {
       setIsLoading(false);
+      console.log("=== Portfolio loadData END ===");
     }
   };
 
   useEffect(() => {
     // Only load data when auth is ready and user is logged in
+    console.log("useEffect triggered - authLoading:", authLoading, "user:", !!user);
     if (!authLoading) {
       loadData();
     }
