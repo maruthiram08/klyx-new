@@ -534,6 +534,7 @@ def get_field_stats(field_name):
 
 
 @app.route("/api/health", methods=["GET"])
+@app.route("/health", methods=["GET"])
 def health_check():
     return jsonify({"status": "ok"})
 

@@ -6,9 +6,30 @@ from langchain_core.tools import tool
 # Add parent directory to path to import services and skills
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from services.market_data_service import market_data_service
-from myskills.technical_analyst import TechnicalAnalyst
-from myskills.news_analyst import NewsAnalyst
+# Optional imports - these may not be available in all environments
+try:
+    from services.market_data_service import market_data_service
+    HAS_MARKET_DATA = True
+except ImportError:
+    market_data_service = None
+    HAS_MARKET_DATA = False
+    print("WARNING: market_data_service not available")
+
+try:
+    from myskills.technical_analyst import TechnicalAnalyst
+    HAS_TECHNICAL = True
+except ImportError:
+    TechnicalAnalyst = None
+    HAS_TECHNICAL = False
+    print("WARNING: TechnicalAnalyst not available")
+
+try:
+    from myskills.news_analyst import NewsAnalyst
+    HAS_NEWS = True
+except ImportError:
+    NewsAnalyst = None
+    HAS_NEWS = False
+    print("WARNING: NewsAnalyst not available")
 
 @tool
 def get_stock_price(ticker: str):
@@ -44,6 +65,8 @@ def get_technical_analysis(ticker: str):
     Fetches technical indicators like RSI, MACD, and Trends for a given stock ticker.
     Ideal for 'Is this stock in an uptrend?' or 'Check RSI' type queries.
     """
+    if not HAS_TECHNICAL:
+        return {"error": "Technical analysis not available in this environment"}
     try:
         # Ensure it has .NS for Indian stocks if it looks like one and suffix is missing
         if ticker.isupper() and "." not in ticker:
@@ -64,6 +87,8 @@ def get_stock_news(stock_name: str):
     Fetches the latest news and sentiment for a stock name (e.g., 'Reliance Industries' or 'Apple Inc').
     Best used when the user asks 'What's the news on X?' or 'Why is Y falling?'.
     """
+    if not HAS_NEWS:
+        return {"error": "News analysis not available in this environment"}
     try:
         analyst = NewsAnalyst(stock_name)
         if analyst.fetch_news():
@@ -86,6 +111,8 @@ def get_fundamentals(symbol: str, statement_type: str = 'standalone'):
     statement_type can be 'standalone' or 'consolidated'.
     Useful for 'Analyze the balance sheet' or 'Is this stock undervalued?' queries.
     """
+    if not HAS_MARKET_DATA:
+        return {"error": "Fundamental data not available in this environment"}
     try:
         data = market_data_service.get_fundamentals(symbol, statement_type=statement_type)
         if "error" in data:
@@ -109,6 +136,8 @@ def search_stocks(query: str):
     Searches for stock ticker symbols based on a company name or partial symbol.
     Always use this if you are unsure of the exact ticker symbol (e.g., if user says 'Reliance').
     """
+    if not HAS_MARKET_DATA:
+        return {"error": "Stock search not available in this environment"}
     try:
         candidates = market_data_service.search_candidates(query)
         if candidates:
