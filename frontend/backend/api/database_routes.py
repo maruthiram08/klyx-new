@@ -164,20 +164,29 @@ def list_stocks():
         - offset: Offset for pagination (default: 0)
         - sector: Filter by sector
         - min_quality: Minimum quality score (default: 30)
+        - search: Search by stock name or NSE code
     """
     try:
         limit = int(request.args.get("limit", 50))
         offset = int(request.args.get("offset", 0))
         sector = request.args.get("sector")
-        min_quality = int(request.args.get("min_quality", 30))
+        search = request.args.get("search")
+        min_quality = int(request.args.get("min_quality", 0))  # Default to 0 for search
 
         # Build query
         where_clauses = [f"data_quality_score >= {min_quality}"]
         params = []
 
         if sector:
-            where_clauses.append("sector_name = ?")
+            where_clauses.append("sector_name = %s")
             params.append(sector)
+
+        if search:
+            # Search by stock name or NSE code (case-insensitive)
+            where_clauses.append("(LOWER(stock_name) LIKE LOWER(%s) OR LOWER(nse_code) LIKE LOWER(%s))")
+            search_pattern = f"%{search}%"
+            params.append(search_pattern)
+            params.append(search_pattern)
 
         where_clause = " AND ".join(where_clauses)
 
@@ -188,7 +197,7 @@ def list_stocks():
             FROM stocks
             WHERE {where_clause}
             ORDER BY market_cap DESC NULLS LAST
-            LIMIT ? OFFSET ?
+            LIMIT %s OFFSET %s
         """
 
         params.extend([limit, offset])
