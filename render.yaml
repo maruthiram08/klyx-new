@@ -30,10 +30,7 @@ services:
     repo: https://github.com/maruthiram08/klyx-new
     schedule: "0 13 * * 1-5"
     buildCommand: pip install requests
-    startCommand: python -c "import requests; requests.post('https://klyx-worker.onrender.com/worker/refresh')"
-    envVars:
-      - key: WORKER_URL
-        value: https://klyx-worker.onrender.com
+    startCommand: "python -c \"import requests; requests.post('https://klyx-worker.onrender.com/worker/refresh')\""
 
   # Cron Job: Weekly enrichment - Sunday 6 AM IST (12:30 AM UTC)
   - type: cron
@@ -44,10 +41,7 @@ services:
     repo: https://github.com/maruthiram08/klyx-new
     schedule: "30 0 * * 0"
     buildCommand: pip install requests
-    startCommand: python -c "import requests; requests.post('https://klyx-worker.onrender.com/worker/enrich', json={'batch_size': 100})"
-    envVars:
-      - key: WORKER_URL
-        value: https://klyx-worker.onrender.com
+    startCommand: "python -c \"import requests; requests.post('https://klyx-worker.onrender.com/worker/enrich', json={'batch_size': 100})\""
 
   # Cron Job: Daily MoneyControl sync - Mon-Fri 7 PM IST (1:30 PM UTC)
   - type: cron
@@ -58,7 +52,4 @@ services:
     repo: https://github.com/maruthiram08/klyx-new
     schedule: "30 13 * * 1-5"
     buildCommand: pip install requests
-    startCommand: python -c "import requests; requests.post('https://klyx-worker.onrender.com/worker/sync-fundamentals')"
-    envVars:
-      - key: WORKER_URL
-        value: https://klyx-worker.onrender.com
+    startCommand: "python -c \"import requests; requests.post('https://klyx-worker.onrender.com/worker/sync-fundamentals')\""
