@@ -26,7 +26,6 @@ services:
     name: daily-price-refresh
     runtime: python
     region: singapore
-    plan: free
     repo: https://github.com/maruthiram08/klyx-new
     schedule: "0 13 * * 1-5"
     buildCommand: pip install requests
@@ -37,7 +36,6 @@ services:
     name: weekly-enrichment
     runtime: python
     region: singapore
-    plan: free
     repo: https://github.com/maruthiram08/klyx-new
     schedule: "30 0 * * 0"
     buildCommand: pip install requests
@@ -48,7 +46,6 @@ services:
     name: daily-fundamentals-sync
     runtime: python
     region: singapore
-    plan: free
     repo: https://github.com/maruthiram08/klyx-new
     schedule: "30 13 * * 1-5"
     buildCommand: pip install requests
