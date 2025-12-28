@@ -4,7 +4,8 @@ import os
 import sys
 
 # Add local directory to path to import skill
-sys.path.append('/Users/maruthi/Desktop/MainDirectory/weekendanalysis tool/backend')
+backend_dir = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(backend_dir)
 
 # Import the skill's modules
 # We need to adapt the import because the files are in 'myskills'
@@ -12,8 +13,9 @@ from myskills.calculate_ratios import FinancialRatioCalculator, generate_summary
 from myskills.technical_analyst import TechnicalAnalyst
 from myskills.news_analyst import NewsAnalyst
 
-input_file = '/Users/maruthi/Desktop/MainDirectory/weekendanalysis tool/backend/nifty50_enriched.xlsx'
-output_file = '/Users/maruthi/Desktop/MainDirectory/weekendanalysis tool/backend/nifty50_final_analysis.xlsx'
+input_file = os.path.join(backend_dir, 'nifty50_enriched.xlsx')
+output_file = os.path.join(backend_dir, 'nifty50_final_analysis.xlsx')
+
 
 # [Keep map_row_to_skill_format unchanged]
 def map_row_to_skill_format(row):

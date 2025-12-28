@@ -176,3 +176,31 @@ class ChatMessage(db.Model):
             "content": self.content,
             "createdAt": self.created_at.isoformat() if self.created_at else None,
         }
+
+
+class UserAnalysis(db.Model):
+    """Stores the results of portfolio analysis/enrichment"""
+
+    __tablename__ = "user_analysis"
+
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    user_id = db.Column(
+        db.String(36), db.ForeignKey("users.id"), nullable=False, index=True
+    )
+    stock_name = db.Column(db.String(255), nullable=False)
+    nse_code = db.Column(db.String(50))
+    analysis_data = db.Column(db.JSON)  # Stores the full enriched data row
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+
+    # Relationships
+    user = db.relationship("User", backref="analyses")
+
+    def to_dict(self):
+        data = self.analysis_data or {}
+        # Ensure ID and metadata are included
+        data["id"] = self.id
+        data["user_id"] = self.user_id
+        data["stock_name"] = self.stock_name
+        data["nse_code"] = self.nse_code
+        data["analyzed_at"] = self.created_at.isoformat() if self.created_at else None
+        return data

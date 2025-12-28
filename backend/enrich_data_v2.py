@@ -13,8 +13,10 @@ from services.multi_source_data_service import multi_source_service
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
-input_file = "/Users/maruthi/Desktop/MainDirectory/weekendanalysis tool/backend/nifty50_unified_master.xlsx"
-output_file = "/Users/maruthi/Desktop/MainDirectory/weekendanalysis tool/backend/nifty50_enriched.xlsx"
+
+backend_dir = os.path.dirname(os.path.abspath(__file__))
+input_file = os.path.join(backend_dir, 'nifty50_unified_master.xlsx')
+output_file = os.path.join(backend_dir, 'nifty50_enriched.xlsx')
 
 # Column mappings from multi-source data to Excel columns
 COLUMN_MAPPINGS = {

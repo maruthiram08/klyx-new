@@ -5,10 +5,14 @@ A comprehensive stock analysis and portfolio management tool for the Indian mark
 ## Features
 
 - **Portfolio Analysis** - Track and analyze your stock portfolio with real-time data
-- **Stock Screener** - Filter stocks with custom criteria or preset strategies
+- **Advanced Stock Screener** - Filter stocks with custom criteria or preset strategies
+  - Magic Formula (ROCE + Earnings Yield)
+  - CANSLIM Growth (EPS Growth + Relative Strength)
+  - Trendlyne DVM (Durability, Valuation, Momentum scores)
+  - Forecaster (Analyst Ratings & Price Targets)
 - **Debt Optimizer** - Analyze and optimize debt reduction strategies
 - **AI Assistant (Ask Klyx)** - AI-powered stock insights and Q&A
-- **Market Data** - Real-time data from NSE, MoneyControl
+- **Market Data** - Real-time data from NSE, MoneyControl, Yahoo Finance
 
 ## Tech Stack
 
@@ -68,6 +72,11 @@ npm run dev
 ```bash
 cd backend
 pip install -r requirements.txt
+
+# Option 1: Use startup script (auto-kills port conflicts)
+./start.sh
+
+# Option 2: Manual start
 python app.py
 # API runs at http://localhost:5001
 ```

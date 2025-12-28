@@ -3,6 +3,8 @@ import logging
 from Fundamentals.MoneyControl import MoneyControl
 import json
 import pandas as pd
+import requests
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -145,8 +147,117 @@ class MarketDataService:
             return data
 
         except Exception as e:
-            logger.error(f"Error fetching fundamentals for {symbol}: {e}")
             return {"error": str(e)}
+
+    def get_shareholding_pattern(self, symbol):
+        """
+        Fetches latest shareholding pattern (Promoter, FII, DII, Public)
+        Returns dict with keys: promoter_pct, fii_pct, dii_pct, public_pct
+        """
+        try:
+            details = self.get_moneycontrol_details(symbol)
+            if not details or not details.get('url'):
+                return None
+
+            mc_id = details['id']
+            url = details['url']
+            
+            # Extract slug from URL for fallback construction
+            # URL format: .../stockpricequote/sector/slug/id
+            # or: .../india/stockpricequote/...
+            slug = None
+            try:
+                parts = url.split('/')
+                # ID is usually last, slug is second to last
+                slug = parts[-2]
+            except: pass
+
+            logger.info(f"Fetching shareholding for {symbol} (Slug: {slug})")
+            
+            headers = {
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.114 Safari/537.36",
+            }
+            
+            # Helper to parse table
+            def parse_holding_table(df):
+                data = {}
+                # Convert to string for easy searching
+                df_str = df.to_string().lower()
+                
+                # Look for Promoter
+                # Usually row 'Promoters' -> 'No. of Shares' -> '%'
+                # Generic approach: Iterate rows
+                try:
+                    for idx, row in df.iterrows():
+                        row_txt = str(row.to_list()).lower()
+                        
+                        # Check columns (usually one col has 'Promoter', another has %)
+                        # Column detection
+                        val_col_idx = -1
+                        # Find column with % (values < 100) or check headers
+                        
+                        # Simplified: Look for keywords in first column, take last column as %
+                        first_val = str(row.iloc[0]).lower()
+                        last_val = row.iloc[-1]
+                        
+                        # Parse percentage
+                        try:
+                            pct = float(str(last_val).replace('%',''))
+                        except: 
+                            continue
+
+                        if 'promoter' in first_val and 'pledge' not in first_val:
+                            data['promoter_holding_pct'] = pct
+                        elif 'fii' in first_val or 'foreign' in first_val:
+                            data['fii_holding_pct'] = pct
+                        elif ('dii' in first_val or 'domestic' in first_val) and 'institutions' in first_val:
+                            data['dii_holding_pct'] = pct
+                        elif 'public' in first_val:
+                            data['public_holding_pct'] = pct
+                            
+                    # Calculate MF if DII missing?
+                    # Usually DII includes MF.
+                    
+                    return data if data else None
+                except: return None
+
+            # Strategy 1: Check Quote Page (often has Shareholding summary)
+            try:
+                # Use pandas read_html directly on URL (simplest if it works)
+                # But headers needed usually
+                r = requests.get(url, headers=headers)
+                if r.status_code == 200:
+                    dfs = pd.read_html(r.text)
+                    for df in dfs:
+                        if 'Promoter' in str(df) and ('%' in str(df) or 'Hol' in str(df)):
+                            res = parse_holding_table(df)
+                            if res and res.get('promoter_holding_pct'):
+                                return res
+            except Exception as e:
+                logger.warning(f"Failed quote page shareholding parse: {e}")
+
+            # Strategy 2: Specific URL
+            if slug and mc_id:
+                # https://www.moneycontrol.com/financials/relianceindustries/shareholding-pattern/VI/RI
+                # Try VI (BSE?) or others? simpler: /company-facts/
+                
+                alt_url = f"https://www.moneycontrol.com/financials/{slug}/shareholding-pattern/VI/{mc_id}"
+                try:
+                    r = requests.get(alt_url, headers=headers)
+                    if r.status_code == 200:
+                        dfs = pd.read_html(r.text)
+                        for df in dfs:
+                             if 'Promoter' in str(df) and '%' in str(df):
+                                 res = parse_holding_table(df)
+                                 if res and res.get('promoter_holding_pct'):
+                                     return res
+                except: pass
+                
+            return None
+
+        except Exception as e:
+            logger.error(f"Error fetching shareholding for {symbol}: {e}")
+            return None
 
 # Singleton instance
 market_data_service = MarketDataService()

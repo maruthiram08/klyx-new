@@ -59,17 +59,18 @@ def enrich_stocks():
     """
     try:
         # Import here to avoid issues if module not found
-        from database.enrich_missing_fields import enrich_all_stocks
+        from database.stock_populator import StockDataPopulator
 
         # Get parameters from request
         data = request.json or {}
         batch_size = data.get("batch_size", 50)
-        offset = data.get("offset", 0)
+        max_stocks = data.get("max_stocks", None) # Optional limit
 
-        logger.info(f"Starting enrichment: batch_size={batch_size}, offset={offset}")
+        logger.info(f"Starting enrichment: batch_size={batch_size}")
 
         # Run enrichment
-        result = enrich_all_stocks(batch_size=batch_size, offset=offset)
+        populator = StockDataPopulator()
+        result = populator.enrich_stock_data(batch_size=batch_size, max_stocks=max_stocks)
 
         logger.info(f"Enrichment complete: {result}")
 
@@ -93,11 +94,16 @@ def populate_database():
     Can take 15-30 minutes
     """
     try:
-        from database.stock_populator import populate_stocks
+        from database.stock_populator import StockDataPopulator, StockListFetcher
 
         logger.info("Starting database population")
-
-        result = populate_stocks()
+        
+        # 1. Fetch latest list
+        stock_list = StockListFetcher.get_nse_stock_list()
+        
+        # 2. Populate/Update initial records
+        populator = StockDataPopulator()
+        result = populator.populate_initial_stocks(stock_list)
 
         logger.info(f"Population complete: {result}")
 

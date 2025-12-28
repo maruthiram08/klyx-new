@@ -21,6 +21,7 @@ from typing import Dict, List, Optional
 import pandas as pd
 from database.db_config import db_config
 from services.multi_source_data_service import multi_source_service
+from services.score_service import ScoreService
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -300,7 +301,7 @@ class StockDataPopulator:
                         """UPDATE stocks SET
                            stock_name = ?,
                            sector_name = ?,
-                           last_updated = datetime('now')
+                           last_updated = CURRENT_TIMESTAMP
                            WHERE nse_code = ?""",
                         (stock.get("name"), stock.get("sector"), stock["nse_code"]),
                     )
@@ -339,11 +340,17 @@ class StockDataPopulator:
         logger.info("Starting stock data enrichment...")
 
         # Get stocks that need enrichment (low quality score or old data)
-        query = """
+        # Handle DB-specific syntax for date subtraction
+        if self.db.is_production:
+            time_condition = "last_updated < CURRENT_TIMESTAMP - INTERVAL '7 days'"
+        else:
+            time_condition = "last_updated < datetime('now', '-7 days')"
+
+        query = f"""
             SELECT id, stock_name, nse_code
             FROM stocks
             WHERE data_quality_score < 80
-               OR last_updated < datetime('now', '-7 days')
+               OR {time_condition}
             ORDER BY market_cap DESC NULLS LAST
         """
 
@@ -401,6 +408,10 @@ class StockDataPopulator:
             except Exception as e:
                 logger.error(f"Failed to enrich {stock['nse_code']}: {e}")
                 failed += 1
+        
+        # After batch adoption: Update Relative Strength for ALL stocks
+        # This ensures RS is fresh based on latest price data
+        self._update_relative_strength()
 
         logger.info(f"✅ Enrichment complete: {enriched} enriched, {failed} failed")
 
@@ -419,6 +430,25 @@ class StockDataPopulator:
         if data.get("current_assets") and data.get("current_liabilities"):
             current_ratio = data["current_assets"] / data["current_liabilities"]
 
+        # Calculate Composite Scores
+        durability_score = ScoreService.calculate_durability(data)
+        valuation_score = ScoreService.calculate_valuation(data)
+        momentum_score = ScoreService.calculate_momentum(data)
+
+        # Magic Formula Stats
+        # ROCE (Return on Capital Employed) - approx as EBIT / (Total Assets - Current Liabilities)
+        # OR fallback to ROE if unavailable. MoneyControl 'ratios' might have it.
+        # For now, let's use data.get('roce') if we can fetch it, else 0.
+        # Since fetch_stock_data doesn't explicitly return ROCE yet, we might need to rely on ROE proxy or add it later.
+        # We'll use ROE as high-correlation proxy for now if ROCE is missing.
+        roce = data.get("roe") * 100 if data.get("roe") else None
+        
+        # Earnings Yield = EBIT / Enterprise Value. Approx as 1 / PE for now (simplest)
+        earnings_yield = 0
+        pe = data.get("pe_ratio") or 0
+        if pe > 0:
+            earnings_yield = (1 / pe) * 100
+
         update_query = """
             UPDATE stocks SET
                 current_price = ?,
@@ -426,6 +456,8 @@ class StockDataPopulator:
                 pe_ttm = ?,
                 pb_ratio = ?,
                 roe_annual_pct = ?,
+                roce_annual_pct = ?,
+                earnings_yield_pct = ?,
                 roa_annual_pct = ?,
                 operating_margin_pct = ?,
                 revenue_growth_yoy_pct = ?,
@@ -435,11 +467,27 @@ class StockDataPopulator:
                 current_ratio = ?,
                 dividend_yield_pct = ?,
                 promoter_holding_pct = ?,
+                fii_holding_pct = ?,
+                dii_holding_pct = ?,
                 data_quality_score = ?,
+                durability_score = ?,
+                valuation_score = ?,
+                momentum_score = ?,
+                target_price = ?,
+                recommendation_key = ?,
+                analyst_count = ?,
                 data_sources = ?,
-                last_updated = datetime('now')
+                year_1_change_pct = ?,
+                last_updated = CURRENT_TIMESTAMP
             WHERE id = ?
         """
+
+        # Year 1 Change: YFinance returns decimal (0.5 for 50%), convert to %
+        y1_change = data.get("year1Change")
+        if y1_change is None:
+             y1_change = data.get("52WeekChange") 
+        if y1_change is not None:
+            y1_change = y1_change * 100
 
         params = (
             data.get("currentPrice"),
@@ -447,6 +495,8 @@ class StockDataPopulator:
             data.get("pe_ratio"),
             data.get("pb_ratio"),
             data.get("roe") * 100 if data.get("roe") else None,
+            roce,
+            earnings_yield,
             data.get("roa") * 100 if data.get("roa") else None,
             data.get("operating_margin") * 100
             if data.get("operating_margin")
@@ -457,17 +507,65 @@ class StockDataPopulator:
             debt_to_equity,
             current_ratio,
             data.get("dividend_yield") * 100 if data.get("dividend_yield") else None,
-            data.get("promoter_holding") * 100
-            if data.get("promoter_holding")
-            else None,
+            data.get("promoter_holding") * 100 if data.get("promoter_holding") is not None else None,
+            data.get("fii_holding") * 100 if data.get("fii_holding") is not None else None,
+            data.get("dii_holding") * 100 if data.get("dii_holding") is not None else None,
             quality["score"],
+            durability_score,
+            valuation_score,
+            momentum_score,
+            data.get("target_mean_price"),
+            data.get("recommendation_key"),
+            data.get("number_of_analyst_opinions"),
             ", ".join(quality.get("sources_used", [])),
+            y1_change,
             stock_id,
         )
 
         self.db.execute_query(update_query, params)
 
-    def get_database_stats(self) -> Dict:
+    def _update_relative_strength(self):
+        """
+        Calculates Relative Strength (0-99) for all stocks based on 1-year performance.
+        Higher score = Outperformed more stocks.
+        """
+        logger.info("Updating Relative Strength (RS) ratings...")
+        try:
+            # 1. Fetch all stocks with valid 1-year return
+            query = """
+                SELECT id, year_1_change_pct 
+                FROM stocks 
+                WHERE year_1_change_pct IS NOT NULL
+            """
+            stocks = self.db.execute_query(query)
+            
+            if not stocks:
+                return
+
+            # 2. Sort by return descending
+            # Convert to list of dicts if not already
+            if isinstance(stocks, list):
+                 sorted_stocks = sorted(stocks, key=lambda x: float(x.get('year_1_change_pct') or 0), reverse=True)
+            
+            total = len(sorted_stocks)
+            updates = []
+            
+            # 3. Calculate percentile rank (99 = Top 1%, 1 = Bottom 1%)
+            # Formula: (Rank / Total) * 100. Rank 0 is highest.
+            for rank, stock in enumerate(sorted_stocks):
+                # Percentile = Number of values below this one / Total values * 100
+                # Using simple rank mapping: Top stock = 99
+                percentile = int(((total - 1 - rank) / (total - 1)) * 99) if total > 1 else 50
+                updates.append((percentile, stock['id']))
+            
+            # 4. Bulk update
+            update_sql = "UPDATE stocks SET rel_strength_score = ? WHERE id = ?"
+            self.db.execute_many(update_sql, updates)
+            
+            logger.info(f"✅ Updated RS Rating for {total} stocks")
+            
+        except Exception as e:
+            logger.error(f"Failed to update Relative Strength: {e}")
         """Get database statistics"""
         stats = {}
 

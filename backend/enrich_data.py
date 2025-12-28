@@ -3,8 +3,9 @@ import yfinance as yf
 import os
 import numpy as np
 
-input_file = '/Users/maruthi/Desktop/MainDirectory/weekendanalysis tool/backend/nifty50_unified_master.xlsx'
-output_file = '/Users/maruthi/Desktop/MainDirectory/weekendanalysis tool/backend/nifty50_enriched.xlsx'
+backend_dir = os.path.dirname(os.path.abspath(__file__))
+input_file = os.path.join(backend_dir, 'nifty50_unified_master.xlsx')
+output_file = os.path.join(backend_dir, 'nifty50_enriched.xlsx')
 
 def fetch_yahoo_data(ticker):
     """
@@ -64,7 +65,7 @@ def main():
             df[col] = 0.0
             
     # Initialize Shareholding Columns
-    sh_cols = ['Promoter holding latest %', 'Institutional holding current Qtr %', 'FII holding current Qtr %', 'MF holding current Qtr %']
+    sh_cols = ['Promoter holding latest %', 'Institutional holding current Qtr %', 'FII holding current Qtr %', 'MF holding current Qtr %', 'DII holding current Qtr %']
     for col in sh_cols:
         if col not in df.columns:
             df[col] = np.nan
@@ -187,6 +188,30 @@ def main():
                 
             # Note: granular FII/DII/MF and QoQ changes are not reliably available in YF info.
             # We populate the high-level aggregates.
+            
+            # 2b. Enhanced Shareholding from MoneyControl (Granular FII/DII)
+            if nse_code and nse_code != 'nan':
+                 try:
+                     # Lazy import to avoid circular issues
+                     from services.market_data_service import market_data_service
+                     print(f"  [MC] Fetching granular shareholding for {nse_code}...")
+                     sh_data = market_data_service.get_shareholding_pattern(nse_code)
+                     
+                     if sh_data:
+                         print(f"    -> Found: {sh_data}")
+                         if sh_data.get('promoter_holding_pct'):
+                             df.at[i, 'Promoter holding latest %'] = sh_data['promoter_holding_pct']
+                         if sh_data.get('fii_holding_pct'):
+                             df.at[i, 'FII holding current Qtr %'] = sh_data['fii_holding_pct']
+                         if sh_data.get('dii_holding_pct'):
+                             df.at[i, 'DII holding current Qtr %'] = sh_data['dii_holding_pct']
+                         
+                         # Update Institutional if we have better breakdown
+                         if sh_data.get('fii_holding_pct') and sh_data.get('dii_holding_pct'):
+                             df.at[i, 'Institutional holding current Qtr %'] = sh_data['fii_holding_pct'] + sh_data['dii_holding_pct']
+                             
+                 except Exception as e:
+                     print(f"  [MC] Shareholding fetch failed: {e}")
 
             # 3. Fill Quarterly Data from Yahoo (Primary Source)
             try:
