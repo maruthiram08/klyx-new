@@ -21,20 +21,7 @@ interface VirtualStockTableProps {
     onTogglePortfolio: (e: React.MouseEvent, stockName: string) => void;
 }
 
-const ROW_HEIGHT = 56;
-
-// Consistent column widths for header and body - more compact
-const COLUMN_WIDTHS = {
-    stock: "150px",
-    sector: "140px",
-    price: "90px",
-    change: "85px",
-    marketCap: "100px",
-    pe: "60px",
-    roe: "60px",
-    quality: "70px",
-    action: "60px",
-};
+const ROW_HEIGHT = 60;
 
 export function VirtualStockTable({
     stocks,
@@ -75,35 +62,48 @@ export function VirtualStockTable({
         );
     }
 
+    // Column style definitions using flex
+    const colStyles = {
+        stock: "flex-[2] min-w-[120px]",
+        sector: "flex-[1.5] min-w-[100px]",
+        price: "flex-1 min-w-[80px] text-right",
+        change: "flex-1 min-w-[80px] text-right",
+        marketCap: "flex-1 min-w-[90px] text-right",
+        pe: "flex-[0.7] min-w-[50px] text-right",
+        roe: "flex-[0.7] min-w-[50px] text-right",
+        quality: "flex-[0.8] min-w-[60px] text-right",
+        action: "flex-[0.5] min-w-[50px] text-right",
+    };
+
     return (
         <div className="bg-white rounded-[2rem] border border-neutral-100 overflow-hidden shadow-sm">
             {/* Header Row */}
-            <div className="bg-neutral-50 border-b border-neutral-100 flex items-center px-4 py-3">
-                <div style={{ width: COLUMN_WIDTHS.stock }} className="text-xs font-bold text-neutral-400 uppercase tracking-wider">
+            <div className="bg-neutral-50 border-b border-neutral-100 flex items-center px-4 py-3 gap-2">
+                <div className={`${colStyles.stock} text-xs font-bold text-neutral-400 uppercase tracking-wider`}>
                     Stock
                 </div>
-                <div style={{ width: COLUMN_WIDTHS.sector }} className="text-xs font-bold text-neutral-400 uppercase tracking-wider">
+                <div className={`${colStyles.sector} text-xs font-bold text-neutral-400 uppercase tracking-wider`}>
                     Sector
                 </div>
-                <div style={{ width: COLUMN_WIDTHS.price }} className="text-xs font-bold text-neutral-400 uppercase tracking-wider text-right">
+                <div className={`${colStyles.price} text-xs font-bold text-neutral-400 uppercase tracking-wider`}>
                     Price
                 </div>
-                <div style={{ width: COLUMN_WIDTHS.change }} className="text-xs font-bold text-neutral-400 uppercase tracking-wider text-right">
+                <div className={`${colStyles.change} text-xs font-bold text-neutral-400 uppercase tracking-wider`}>
                     Change
                 </div>
-                <div style={{ width: COLUMN_WIDTHS.marketCap }} className="text-xs font-bold text-neutral-400 uppercase tracking-wider text-right">
+                <div className={`${colStyles.marketCap} text-xs font-bold text-neutral-400 uppercase tracking-wider`}>
                     Market Cap
                 </div>
-                <div style={{ width: COLUMN_WIDTHS.pe }} className="text-xs font-bold text-neutral-400 uppercase tracking-wider text-right">
+                <div className={`${colStyles.pe} text-xs font-bold text-neutral-400 uppercase tracking-wider`}>
                     P/E
                 </div>
-                <div style={{ width: COLUMN_WIDTHS.roe }} className="text-xs font-bold text-neutral-400 uppercase tracking-wider text-right">
+                <div className={`${colStyles.roe} text-xs font-bold text-neutral-400 uppercase tracking-wider`}>
                     ROE
                 </div>
-                <div style={{ width: COLUMN_WIDTHS.quality }} className="text-xs font-bold text-neutral-400 uppercase tracking-wider text-right">
+                <div className={`${colStyles.quality} text-xs font-bold text-neutral-400 uppercase tracking-wider`}>
                     Quality
                 </div>
-                <div style={{ width: COLUMN_WIDTHS.action }} className="text-xs font-bold text-neutral-400 uppercase tracking-wider text-right">
+                <div className={`${colStyles.action} text-xs font-bold text-neutral-400 uppercase tracking-wider`}>
                     Action
                 </div>
             </div>
@@ -130,7 +130,7 @@ export function VirtualStockTable({
                         return (
                             <div
                                 key={stock["NSE Code"]}
-                                className="absolute top-0 left-0 w-full flex items-center px-4 hover:bg-neutral-50/50 transition-colors cursor-pointer group border-b border-neutral-100"
+                                className="absolute top-0 left-0 w-full flex items-center px-4 gap-2 hover:bg-neutral-50/50 transition-colors cursor-pointer group border-b border-neutral-100"
                                 style={{
                                     height: `${ROW_HEIGHT}px`,
                                     transform: `translateY(${virtualRow.start}px)`,
@@ -138,9 +138,9 @@ export function VirtualStockTable({
                                 onClick={() => router.push(`/stock/${stock["NSE Code"]}`)}
                             >
                                 {/* Stock Name */}
-                                <div style={{ width: COLUMN_WIDTHS.stock }} className="whitespace-nowrap">
+                                <div className={colStyles.stock}>
                                     <div className="flex flex-col">
-                                        <span className="font-bold text-neutral-900 text-sm truncate">
+                                        <span className="font-semibold text-neutral-900 text-sm truncate">
                                             {stockName}
                                         </span>
                                         <span className="text-xs text-neutral-400">
@@ -150,20 +150,20 @@ export function VirtualStockTable({
                                 </div>
 
                                 {/* Sector */}
-                                <div style={{ width: COLUMN_WIDTHS.sector }} className="whitespace-nowrap">
-                                    <span className="px-2 py-1 bg-neutral-100 rounded-lg text-xs font-medium text-neutral-600 truncate inline-block max-w-[140px]">
+                                <div className={colStyles.sector}>
+                                    <span className="px-2 py-0.5 bg-neutral-100 rounded text-xs font-medium text-neutral-600 truncate inline-block max-w-full">
                                         {stock.sector_name || "N/A"}
                                     </span>
                                 </div>
 
                                 {/* Price */}
-                                <div style={{ width: COLUMN_WIDTHS.price }} className="whitespace-nowrap text-right font-mono font-medium text-sm">
+                                <div className={`${colStyles.price} font-mono font-medium text-sm`}>
                                     {formatCurrency(stock["Current Price"])}
                                 </div>
 
                                 {/* Change */}
-                                <div style={{ width: COLUMN_WIDTHS.change }} className="whitespace-nowrap text-right">
-                                    <div
+                                <div className={colStyles.change}>
+                                    <span
                                         className={`inline-flex items-center gap-1 font-medium text-sm ${Number(stock["Day change %"]) >= 0
                                             ? "text-emerald-600"
                                             : "text-rose-600"
@@ -175,34 +175,34 @@ export function VirtualStockTable({
                                             <TrendingDown size={12} />
                                         )}
                                         {formatPercent(stock["Day change %"])}
-                                    </div>
+                                    </span>
                                 </div>
 
                                 {/* Market Cap */}
-                                <div style={{ width: COLUMN_WIDTHS.marketCap }} className="whitespace-nowrap text-right text-neutral-600 font-mono text-sm">
+                                <div className={`${colStyles.marketCap} text-neutral-600 font-mono text-sm`}>
                                     {stock["Market Capitalization"]
                                         ? `₹${(Number(stock["Market Capitalization"]) / 10000000).toFixed(0)}Cr`
                                         : "-"}
                                 </div>
 
                                 {/* P/E */}
-                                <div style={{ width: COLUMN_WIDTHS.pe }} className="whitespace-nowrap text-right text-neutral-600 font-mono text-sm">
+                                <div className={`${colStyles.pe} text-neutral-600 font-mono text-sm`}>
                                     {stock["PE TTM Price to Earnings"]
                                         ? Number(stock["PE TTM Price to Earnings"]).toFixed(1)
                                         : "-"}
                                 </div>
 
                                 {/* ROE */}
-                                <div style={{ width: COLUMN_WIDTHS.roe }} className="whitespace-nowrap text-right text-neutral-600 font-mono text-sm">
+                                <div className={`${colStyles.roe} text-neutral-600 font-mono text-sm`}>
                                     {stock["ROE Annual %"]
                                         ? `${Number(stock["ROE Annual %"]).toFixed(1)}%`
                                         : "-"}
                                 </div>
 
                                 {/* Quality */}
-                                <div style={{ width: COLUMN_WIDTHS.quality }} className="whitespace-nowrap text-right">
+                                <div className={colStyles.quality}>
                                     {stock["Data Quality Score"] && (
-                                        <div className="inline-flex items-center gap-1">
+                                        <div className="inline-flex items-center gap-1 justify-end">
                                             <div
                                                 className={`w-2 h-2 rounded-full ${Number(stock["Data Quality Score"]) >= 80
                                                     ? "bg-emerald-500"
@@ -219,7 +219,7 @@ export function VirtualStockTable({
                                 </div>
 
                                 {/* Action */}
-                                <div style={{ width: COLUMN_WIDTHS.action }} className="whitespace-nowrap text-right">
+                                <div className={colStyles.action}>
                                     <button
                                         disabled={isProcessing}
                                         onClick={(e) => onTogglePortfolio(e, stockName)}
