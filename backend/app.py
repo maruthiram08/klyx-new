@@ -508,7 +508,7 @@ def get_screener_presets():
                 }
             )
 
-        return jsonify({"status": "success", "presets": preset_list})
+        return jsonify({"status": "success", "data": preset_list})
 
     except Exception as e:
         import traceback
@@ -668,25 +668,15 @@ def apply_custom_filter():
 def get_screener_fields():
     """Get all available fields for screening with statistics"""
     try:
-        from services.screener_service import create_screener
-
-        screener = create_screener("nifty50_final_analysis.xlsx")
-
-        if not screener:
-            return jsonify(
-                {
-                    "status": "error",
-                    "message": "No data available. Run processing first.",
-                }
-            ), 404
-
+        from services.screener_db_service import DatabaseScreener
+        
+        screener = DatabaseScreener()
         fields = screener.get_available_fields()
-
-        return jsonify({"status": "success", "fields": fields})
-
+        
+        return jsonify({"status": "success", "data": fields})
+        
     except Exception as e:
         import traceback
-
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
 
