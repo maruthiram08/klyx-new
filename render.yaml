@@ -37,20 +37,23 @@ services:
       - key: OPENAI_API_KEY
         sync: false
 
-  # Background Worker API - Runs continuously
+  # Background Worker API - Runs continuously (HTTP endpoints)
   - type: web
     name: klyx-worker
     runtime: python
     region: singapore
     plan: free
     repo: https://github.com/maruthiram08/klyx-new
-    buildCommand: pip install -r frontend/backend/requirements.txt
-    startCommand: python frontend/backend/worker_app.py
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: python worker_app.py
     healthCheckPath: /health
     envVars:
       - key: POSTGRES_URL
         sync: false
       - key: DATABASE_URL
+        sync: false
+      - key: REDIS_URL
         sync: false
       - key: GOOGLE_API_KEY
         sync: false
@@ -58,3 +61,22 @@ services:
         sync: false
       - key: WORKER_API_KEY
         sync: false
+
+  # Celery Background Worker - Processes async tasks from Redis queue
+  - type: worker
+    name: klyx-celery-worker
+    runtime: python
+    region: singapore
+    plan: free
+    repo: https://github.com/maruthiram08/klyx-new
+    rootDir: backend
+    buildCommand: pip install -r requirements.txt
+    startCommand: celery -A celery_app worker --loglevel=info --concurrency=2
+    envVars:
+      - key: POSTGRES_URL
+        sync: false
+      - key: REDIS_URL
+        sync: false
+      - key: GOOGLE_API_KEY
+        sync: false
+

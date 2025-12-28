@@ -28,20 +28,47 @@ class DatabaseConfig:
         # Local SQLite for development
         self.sqlite_path = os.path.join(os.path.dirname(__file__), "stocks.db")
 
+        # Initialize connection pool for PostgreSQL
+        self.connection_pool = None
+        if self.is_production:
+            try:
+                from psycopg2 import pool
+                self.connection_pool = pool.ThreadedConnectionPool(
+                    minconn=2,
+                    maxconn=20,
+                    dsn=self.postgres_url,
+                    cursor_factory=RealDictCursor
+                )
+                print("✓ Database connection pool initialized")
+            except Exception as e:
+                print(f"FAILED to initialize connection pool: {e}")
+
     @contextmanager
     def get_connection(self):
         """Get database connection (Postgres or SQLite based on environment)"""
         if self.is_production and self.postgres_url:
-            # Production: Use Vercel Postgres
-            conn = psycopg2.connect(self.postgres_url, cursor_factory=RealDictCursor)
-            try:
-                yield conn
-                conn.commit()
-            except Exception as e:
-                conn.rollback()
-                raise e
-            finally:
-                conn.close()
+            # Production: Use Vercel Postgres Pool
+            if self.connection_pool:
+                conn = self.connection_pool.getconn()
+                try:
+                    yield conn
+                    conn.commit()
+                except Exception as e:
+                    conn.rollback()
+                    raise e
+                finally:
+                    self.connection_pool.putconn(conn)
+            else:
+                # Fallback if pool failed
+                conn = psycopg2.connect(self.postgres_url, cursor_factory=RealDictCursor)
+                try:
+                    yield conn
+                    conn.commit()
+                except Exception as e:
+                    conn.rollback()
+                    raise e
+                finally:
+                    conn.close()
         else:
             # Development: Use SQLite
             conn = sqlite3.connect(self.sqlite_path)

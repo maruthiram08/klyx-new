@@ -93,6 +93,29 @@ export const api = {
     return data;
   },
 
+  getStocksBatch: async (stockNames: string[]) => {
+    const res = await fetch(`${API_BASE}/database/stocks/batch`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ stock_names: stockNames })
+    });
+
+    if (!res.ok) {
+      throw new Error(`Failed to fetch stocks batch: ${res.status}`);
+    }
+
+    const data = await res.json();
+
+    if (data.status === 'success') {
+      // Map to frontend format
+      data.data = data.data.map(mapDatabaseToFrontend);
+    }
+
+    return data;
+  },
+
   getStockDetails: async (code: string) => {
     const res = await fetch(`${API_BASE}/database/stocks/${code}`);
     if (!res.ok) throw new Error('Failed to fetch stock details');

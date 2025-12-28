@@ -71,27 +71,22 @@ export default function Home() {
         return;
       }
 
-      // Fetch stock details for each stock name from the database
-      console.log("Fetching details for each stock...");
-      const stockPromises = stockNames.map(async (stockName) => {
-        try {
-          console.log(`Searching for: ${stockName}`);
-          const res = await api.getStocks({ search: stockName, limit: 1 });
-          console.log(`Search result for ${stockName}:`, res?.data?.length || 0, "stocks found");
-          if (res && res.status === "success" && res.data.length > 0) {
-            return res.data[0];
-          }
-          return null;
-        } catch (e) {
-          console.error(`Failed to fetch ${stockName}:`, e);
-          return null;
-        }
-      });
+      // Fetch all stock details in ONE batch request
+      console.log(`Fetching ${stockNames.length} stocks in batch...`);
+      const batchRes = await api.getStocksBatch(stockNames);
 
-      const stocksData = await Promise.all(stockPromises);
-      const validStocks = stocksData.filter((s): s is Stock => s !== null);
-      console.log("Valid stocks found:", validStocks.length);
-      setStocks(validStocks);
+      if (batchRes.status === "success") {
+        console.log(`Found ${batchRes.data.length} stocks`);
+
+        if (batchRes.metadata && batchRes.metadata.missing && batchRes.metadata.missing.length > 0) {
+          console.warn("Missing stocks from database:", batchRes.metadata.missing);
+        }
+
+        setStocks(batchRes.data);
+      } else {
+        console.error("Batch fetch failed:", batchRes.message);
+        setStocks([]);
+      }
     } catch (e) {
       console.error("Failed to load portfolio:", e);
       setStocks([]);

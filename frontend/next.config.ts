@@ -13,6 +13,19 @@ const nextConfig: NextConfig = {
       },
     ];
   },
+  async headers() {
+    return [
+      {
+        source: '/api/(screener/presets|database/sectors|database/stats)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=1800, stale-while-revalidate=3600',
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;

@@ -126,6 +126,18 @@ CREATE INDEX IF NOT EXISTS idx_pe_ratio ON stocks(pe_ttm);
 CREATE INDEX IF NOT EXISTS idx_roe ON stocks(roe_annual_pct);
 CREATE INDEX IF NOT EXISTS idx_last_updated ON stocks(last_updated);
 
+-- Additional Performance Indexes (Added Dec 28, 2025)
+CREATE INDEX IF NOT EXISTS idx_stocks_name ON stocks(stock_name);
+CREATE INDEX IF NOT EXISTS idx_stocks_nse_code ON stocks(nse_code);
+CREATE INDEX IF NOT EXISTS idx_stocks_quality ON stocks(data_quality_score);
+CREATE INDEX IF NOT EXISTS idx_stocks_sector_quality ON stocks(sector_name, data_quality_score);
+CREATE INDEX IF NOT EXISTS idx_stocks_name_lower ON stocks(LOWER(stock_name));
+CREATE INDEX IF NOT EXISTS idx_stocks_code_lower ON stocks(LOWER(nse_code));
+CREATE INDEX IF NOT EXISTS idx_stocks_pb_ratio ON stocks(pb_ratio);
+CREATE INDEX IF NOT EXISTS idx_stocks_day_change ON stocks(day_change_pct);
+CREATE INDEX IF NOT EXISTS idx_stocks_month_change ON stocks(month_change_pct);
+CREATE INDEX IF NOT EXISTS idx_stocks_market_cap_desc ON stocks(market_cap DESC);
+
 -- Stock metadata table for additional info
 CREATE TABLE IF NOT EXISTS stock_metadata (
     id SERIAL PRIMARY KEY,

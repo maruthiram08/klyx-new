@@ -190,9 +190,21 @@ class DatabaseScreener:
         # Build LIMIT clause
         limit_clause = f"LIMIT {limit}" if limit else ""
 
+        # Build SELECT clause with aliases for frontend
+        select_fields = []
+        for frontend_field, db_field in self.FIELD_MAPPING.items():
+            select_fields.append(f'{db_field} AS "{frontend_field}"')
+        
+        # Always include ID and NSE Code for linking
+        select_fields.append("id")
+        # Ensure nse_code matches frontend expectations if not already mapped (it is mapped as "NSE Code")
+        
+        select_clause = ",\n            ".join(select_fields)
+
         # Build full query
         query = f"""
-            SELECT *
+            SELECT 
+            {select_clause}
             FROM stocks
             WHERE {where_clause}
               AND data_quality_score >= 30
@@ -206,8 +218,8 @@ class DatabaseScreener:
         try:
             results = self.db.execute_query(query, params)
 
-            # Transform results to frontend format
-            transformed_results = self._transform_to_frontend_format(results)
+            # Transformation handled by SQL aliases now!
+            transformed_results = results
 
             # Get total count
             count_query = f"SELECT COUNT(*) as count FROM stocks WHERE {where_clause} AND data_quality_score >= 30"

@@ -43,17 +43,45 @@ else:
 app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
 app.config["JWT_SECRET_KEY"] = os.environ.get("JWT_SECRET_KEY", "super-secret-key-change-me")
 
-# Import models & extensions
 from models import db
 from auth import auth_bp, bcrypt, jwt
+from cache_config import cache  # Import cache extension
 from portfolio_routes import portfolio_bp
 from debt_optimizer_routes import debt_optimizer_bp
 from chat_routes import chat_bp
+
+# Rate Limiting Configuration
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
+
+limiter = Limiter(
+    key_func=get_remote_address,
+    app=app,
+    default_limits=["1000 per hour", "100 per minute"],
+    storage_uri="memory://",  # Use Redis in production: os.environ.get("REDIS_URL", "memory://")
+)
 
 # Initialize extensions
 db.init_app(app)
 bcrypt.init_app(app)
 jwt.init_app(app)
+cache.init_app(app)  # Initialize cache
+
+
+# Security Headers
+@app.after_request
+def add_security_headers(response):
+    """Add security headers to all responses"""
+    response.headers['X-Content-Type-Options'] = 'nosniff'
+    response.headers['X-Frame-Options'] = 'DENY'
+    response.headers['X-XSS-Protection'] = '1; mode=block'
+    response.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+    
+    # HSTS only in production (HTTPS)
+    if os.environ.get('FLASK_ENV') == 'production':
+        response.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+    
+    return response
 
 # Create tables
 with app.app_context():
@@ -151,41 +179,110 @@ def use_sample():
 
 @app.route("/api/process", methods=["POST"])
 def process_data():
+    """
+    Start background portfolio processing task.
+    Returns task ID for status tracking.
+    
+    Note: Requires Redis and Celery worker to be running.
+    If Celery is not available, falls back to synchronous processing.
+    """
     try:
         # Check if user wants to use new multi-source enrichment
         use_multi_source = (
             request.json.get("use_multi_source", False) if request.json else False
         )
+        
+        # Try to use Celery for background processing
+        try:
+            from celery_app import celery_app
+            from tasks.portfolio_tasks import process_portfolio_task
+            
+            # Get user ID if authenticated
+            user_id = "anonymous"
+            try:
+                from flask_jwt_extended import get_jwt_identity
+                user_id = get_jwt_identity() or "anonymous"
+            except:
+                pass
+            
+            # Start background task
+            task = process_portfolio_task.delay(user_id, use_multi_source)
+            
+            return jsonify({
+                "status": "processing",
+                "task_id": task.id,
+                "message": "Portfolio processing started in background",
+                "check_status_url": f"/api/process/status/{task.id}"
+            })
+            
+        except Exception as celery_error:
+            # Celery not available, fall back to synchronous processing
+            print(f"Celery not available ({celery_error}), using synchronous processing...")
+            
+            print("Step 1: Cleaning Data...")
+            clean_data.main()
 
-        # Run scripts relative to THIS directory
-        # The scripts use 'datasource/' paths. Since we are IN backend/, and datasource IS in backend/datasource,
-        # we might need to change CWD or update scripts.
-        # Easier hack: Change CWD to backend/ temporarily if not already.
+            if use_multi_source:
+                print("Step 2: Enriching Data (Multi-Source Strategy)...")
+                import enrich_data_v2
+                enrich_data_v2.main()
+            else:
+                print("Step 2: Enriching Data (yfinance)...")
+                enrich_data.main()
 
-        # Actually simplest is ensuring we run app.py from backend/ dir.
-        print("Step 1: Cleaning Data...")
-        clean_data.main()
+            print("Step 3: Generating Insights...")
+            generate_insights.main()
 
-        if use_multi_source:
-            print("Step 2: Enriching Data (Multi-Source Strategy)...")
-            import enrich_data_v2
-
-            enrich_data_v2.main()
-        else:
-            print("Step 2: Enriching Data (yfinance)...")
-            enrich_data.main()
-
-        print("Step 3: Generating Insights...")
-        generate_insights.main()
-
-        return jsonify(
-            {"status": "success", "message": "Pipeline completed successfully."}
-        )
+            return jsonify(
+                {"status": "success", "message": "Pipeline completed successfully."}
+            )
 
     except Exception as e:
         import traceback
-
         traceback.print_exc()
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
+@app.route("/api/process/status/<task_id>", methods=["GET"])
+def check_process_status(task_id):
+    """
+    Check the status of a background processing task.
+    
+    Returns:
+        {
+            "status": "PENDING" | "PROGRESS" | "SUCCESS" | "FAILURE",
+            "progress": { current, total, percent, message },
+            "result": { ... } (if completed)
+        }
+    """
+    try:
+        from celery_app import celery_app
+        
+        task = celery_app.AsyncResult(task_id)
+        
+        response = {
+            "status": task.state,
+            "task_id": task_id
+        }
+        
+        if task.state == 'PENDING':
+            response['message'] = 'Task is waiting to start...'
+            
+        elif task.state == 'PROGRESS':
+            response['progress'] = task.info
+            response['message'] = task.info.get('message', 'Processing...')
+            
+        elif task.state == 'SUCCESS':
+            response['result'] = task.result
+            response['message'] = 'Processing completed successfully'
+            
+        elif task.state == 'FAILURE':
+            response['error'] = str(task.info)
+            response['message'] = 'Processing failed'
+        
+        return jsonify(response)
+    
+    except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
@@ -314,7 +411,10 @@ def submit_corrections():
 # ==================== SCREENER API ENDPOINTS ====================
 
 
+from cache_utils import cache_response
+
 @app.route("/api/screener/presets", methods=["GET"])
+@cache_response(max_age=3600)
 def get_screener_presets():
     """Get all available screening presets"""
     try:

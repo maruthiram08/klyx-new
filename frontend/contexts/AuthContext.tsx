@@ -25,16 +25,17 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);  // Non-blocking: start with false
+  const [isInitialized, setIsInitialized] = useState(false);
 
-  // Load user from token on mount
+  // Load user from token on mount - non-blocking
   useEffect(() => {
     const token = localStorage.getItem("klyx_access_token");
     if (token) {
-      // Verify token and get user info
+      // Verify token in background, don't block render
       fetchCurrentUser(token);
     } else {
-      setLoading(false);
+      setIsInitialized(true);
     }
   }, []);
 
@@ -59,7 +60,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       localStorage.removeItem("klyx_access_token");
       localStorage.removeItem("klyx_refresh_token");
     } finally {
-      setLoading(false);
+      setIsInitialized(true);
     }
   };
 

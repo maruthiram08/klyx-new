@@ -17,3 +17,8 @@ fastapi
 uvicorn
 python-dotenv
 PyJWT
+
+# Background task processing
+celery==5.3.4
+redis==5.0.1
+flask-limiter

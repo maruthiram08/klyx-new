@@ -21,8 +21,28 @@ import logging
 from database.db_config import db_config
 from database.stock_populator import StockDataPopulator, StockListFetcher
 from services.screener_db_service import db_screener
+from cache_config import cache  # Import cache wrapper
 
 logger = logging.getLogger(__name__)
+
+
+# Input validation helpers
+import re
+
+def sanitize_search_input(text: str, max_length: int = 100) -> str:
+    """Sanitize search input to prevent SQL injection and XSS"""
+    if not text:
+        return ""
+    # Remove any non-alphanumeric except spaces, hyphens, ampersands
+    sanitized = re.sub(r'[^\w\s\-&]', '', text)
+    return sanitized[:max_length].strip()
+
+def validate_nse_code(code: str) -> bool:
+    """Validate NSE code format (letters, numbers, underscore, hyphen)"""
+    if not code:
+        return False
+    return bool(re.match(r'^[A-Za-z0-9_\-]{1,20}$', code))
+
 
 # Create blueprint
 db_routes = Blueprint("database", __name__, url_prefix="/api/database")
@@ -133,6 +153,7 @@ def get_database_stats():
 
 
 @db_routes.route("/stocks", methods=["GET"])
+@cache.cached(timeout=60, query_string=True)
 def list_stocks():
     """
     List stocks with pagination.
@@ -144,11 +165,11 @@ def list_stocks():
         - min_quality: Minimum quality score (default: 30)
     """
     try:
-        limit = int(request.args.get("limit", 50))
-        offset = int(request.args.get("offset", 0))
-        sector = request.args.get("sector")
-        min_quality = int(request.args.get("min_quality", 30))
-        search = request.args.get("search")
+        limit = min(int(request.args.get("limit", 50)), 500)  # Max 500
+        offset = max(int(request.args.get("offset", 0)), 0)  # No negative offset
+        sector = sanitize_search_input(request.args.get("sector", ""))
+        min_quality = max(min(int(request.args.get("min_quality", 30)), 100), 0)  # 0-100
+        search = sanitize_search_input(request.args.get("search", ""))
 
         # Build query
         where_clauses = [f"data_quality_score >= {min_quality}"]
@@ -206,6 +227,7 @@ def list_stocks():
 
 
 @db_routes.route("/stocks/<nse_code>", methods=["GET"])
+@cache.memoize(timeout=300)
 def get_stock_details(nse_code: str):
     """Get detailed stock information"""
     try:
@@ -269,7 +291,10 @@ def refresh_database():
         return jsonify({"status": "error", "message": str(e)}), 500
 
 
+from cache_utils import cache_response
+
 @db_routes.route("/sectors", methods=["GET"])
+@cache_response(max_age=3600)
 def get_sectors():
     """Get list of all sectors with stock counts"""
     try:
@@ -288,20 +313,67 @@ def get_sectors():
     except Exception as e:
         logger.error(f"Get sectors error: {e}")
         return jsonify({"status": "error", "message": str(e)}), 500
-    """Get list of all sectors with stock counts"""
+@db_routes.route("/stocks/batch", methods=["POST"])
+def get_stocks_batch():
+    """
+    Get multiple stocks in a single query.
+    
+    Request body:
+    {
+        "stock_names": ["Reliance Industries", "TCS", "Infosys"]
+    }
+    """
     try:
-        query = """
-            SELECT sector_name, COUNT(*) as stock_count
+        data = request.get_json()
+        
+        if not data or 'stock_names' not in data:
+            return jsonify({
+                "status": "error",
+                "message": "stock_names array is required in request body"
+            }), 400
+        
+        stock_names = data['stock_names']
+        
+        if not isinstance(stock_names, list):
+            return jsonify({
+                "status": "error",
+                "message": "stock_names must be an array"
+            }), 400
+        
+        if len(stock_names) == 0:
+            return jsonify({
+                "status": "success",
+                "data": [],
+                "metadata": {"requested": 0, "found": 0, "missing": []}
+            })
+        
+        # Build SQL query with IN clause
+        placeholders = ','.join(['?' for _ in stock_names])
+        query = f"""
+            SELECT *
             FROM stocks
-            WHERE sector_name IS NOT NULL
-            GROUP BY sector_name
-            ORDER BY stock_count DESC
+            WHERE stock_name IN ({placeholders})
         """
-
-        sectors = db_config.execute_query(query)
-
-        return jsonify({"status": "success", "data": sectors})
-
+        
+        stocks = db_config.execute_query(query, tuple(stock_names))
+        
+        # Track which stocks were found
+        found_names = {stock['stock_name'] for stock in stocks}
+        missing_names = [name for name in stock_names if name not in found_names]
+        
+        return jsonify({
+            "status": "success",
+            "data": stocks,
+            "metadata": {
+                "requested": len(stock_names),
+                "found": len(stocks),
+                "missing": missing_names
+            }
+        })
+    
     except Exception as e:
-        logger.error(f"Get sectors error: {e}")
-        return jsonify({"status": "error", "message": str(e)}), 500
+        logger.error(f"Batch stocks error: {e}")
+        return jsonify({
+            "status": "error",
+            "message": str(e)
+        }), 500
