@@ -711,5 +711,40 @@ def health_check():
     return jsonify({"status": "ok"})
 
 
+@app.route("/api/migrate", methods=["POST"])
+def run_database_migrations():
+    """Run database migrations to add new columns (safe to run multiple times)"""
+    try:
+        migrations = [
+            "ALTER TABLE stocks ADD COLUMN IF NOT EXISTS durability_score INTEGER",
+            "ALTER TABLE stocks ADD COLUMN IF NOT EXISTS valuation_score INTEGER",
+            "ALTER TABLE stocks ADD COLUMN IF NOT EXISTS momentum_score INTEGER",
+            "ALTER TABLE stocks ADD COLUMN IF NOT EXISTS roce_annual_pct DECIMAL(10,2)",
+            "ALTER TABLE stocks ADD COLUMN IF NOT EXISTS earnings_yield_pct DECIMAL(10,2)",
+            "ALTER TABLE stocks ADD COLUMN IF NOT EXISTS rel_strength_score INTEGER",
+            "ALTER TABLE stocks ADD COLUMN IF NOT EXISTS target_price DECIMAL(10,2)",
+            "ALTER TABLE stocks ADD COLUMN IF NOT EXISTS recommendation_key VARCHAR(50)",
+            "ALTER TABLE stocks ADD COLUMN IF NOT EXISTS analyst_count INTEGER",
+        ]
+        
+        results = []
+        for i, migration in enumerate(migrations, 1):
+            try:
+                db_config.execute_query(migration)
+                results.append({"migration": i, "status": "success"})
+            except Exception as e:
+                results.append({"migration": i, "status": "skipped", "reason": str(e)[:100]})
+        
+        return jsonify({
+            "status": "success",
+            "message": "Database migrations completed",
+            "results": results
+        })
+        
+    except Exception as e:
+        return jsonify({"status": "error", "message": str(e)}), 500
+
+
 if __name__ == "__main__":
     app.run(debug=True, port=5001)
+
