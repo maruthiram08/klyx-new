@@ -54,6 +54,18 @@ export function VirtualStockTable({
         return `${num > 0 ? "+" : ""}${num.toFixed(2)}%`;
     };
 
+    // Debug: log stocks count
+    console.log(`[VirtualStockTable] Rendering ${stocks.length} stocks`);
+
+    // Handle empty state
+    if (!stocks || stocks.length === 0) {
+        return (
+            <div className="bg-white rounded-[2rem] border border-neutral-100 overflow-hidden shadow-sm p-12 text-center">
+                <p className="text-neutral-500">No stocks found</p>
+            </div>
+        );
+    }
+
     return (
         <div className="bg-white rounded-[2rem] border border-neutral-100 overflow-hidden shadow-sm">
             {/* Fixed Header */}
@@ -150,8 +162,8 @@ export function VirtualStockTable({
                                 <div className="px-6 w-[100px] whitespace-nowrap text-right">
                                     <div
                                         className={`inline-flex items-center gap-1 font-medium ${Number(stock["Day change %"]) >= 0
-                                                ? "text-emerald-600"
-                                                : "text-rose-600"
+                                            ? "text-emerald-600"
+                                            : "text-rose-600"
                                             }`}
                                     >
                                         {Number(stock["Day change %"]) >= 0 ? (
@@ -192,10 +204,10 @@ export function VirtualStockTable({
                                         <div className="inline-flex items-center gap-1">
                                             <div
                                                 className={`w-2 h-2 rounded-full ${Number(stock["Data Quality Score"]) >= 80
-                                                        ? "bg-emerald-500"
-                                                        : Number(stock["Data Quality Score"]) >= 50
-                                                            ? "bg-amber-500"
-                                                            : "bg-rose-500"
+                                                    ? "bg-emerald-500"
+                                                    : Number(stock["Data Quality Score"]) >= 50
+                                                        ? "bg-amber-500"
+                                                        : "bg-rose-500"
                                                     }`}
                                             ></div>
                                             <span className="text-xs font-medium">
