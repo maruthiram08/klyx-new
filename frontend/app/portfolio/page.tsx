@@ -247,14 +247,6 @@ export default function Home() {
                 <Trash2 size={20} />
               </button>
 
-              <button
-                onClick={() => setShowFixDbConfirm(true)}
-                className="p-2.5 rounded-full text-neutral-400 hover:text-amber-600 hover:bg-amber-50 transition-colors"
-                title="Fix Database Schema"
-              >
-                <span className="text-xs font-bold">FIX DB</span>
-              </button>
-
               <div className="h-6 w-px bg-neutral-300 mx-1"></div>
 
               <label
