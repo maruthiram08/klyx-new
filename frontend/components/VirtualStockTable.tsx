@@ -21,19 +21,19 @@ interface VirtualStockTableProps {
     onTogglePortfolio: (e: React.MouseEvent, stockName: string) => void;
 }
 
-const ROW_HEIGHT = 64;
+const ROW_HEIGHT = 56;
 
-// Consistent column widths for header and body
+// Consistent column widths for header and body - more compact
 const COLUMN_WIDTHS = {
-    stock: "180px",
-    sector: "160px",
-    price: "120px",
-    change: "100px",
-    marketCap: "120px",
-    pe: "80px",
-    roe: "80px",
-    quality: "80px",
-    action: "80px",
+    stock: "150px",
+    sector: "140px",
+    price: "90px",
+    change: "85px",
+    marketCap: "100px",
+    pe: "60px",
+    roe: "60px",
+    quality: "70px",
+    action: "60px",
 };
 
 export function VirtualStockTable({
