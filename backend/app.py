@@ -59,13 +59,8 @@ def get_rate_limit_storage():
     redis_url = os.environ.get("REDIS_URL")
     if redis_url:
         # Handle Upstash SSL requirements
-        if 'upstash.io' in redis_url:
-            if redis_url.startswith('redis://'):
-                redis_url = redis_url.replace('redis://', 'rediss://', 1)
-            if '?' not in redis_url:
-                redis_url += '?ssl_cert_reqs=CERT_NONE'
-            elif 'ssl_cert_reqs' not in redis_url:
-                redis_url += '&ssl_cert_reqs=CERT_NONE'
+        if 'upstash.io' in redis_url and redis_url.startswith('redis://'):
+            redis_url = redis_url.replace('redis://', 'rediss://', 1)
         return redis_url
     return "memory://"
 

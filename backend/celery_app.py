@@ -26,11 +26,6 @@ if REDIS_URL and 'upstash.io' in REDIS_URL:
     # Ensure rediss:// scheme
     if REDIS_URL.startswith('redis://'):
         REDIS_URL = REDIS_URL.replace('redis://', 'rediss://', 1)
-    # Add SSL cert requirement for Celery
-    if '?' not in REDIS_URL:
-        REDIS_URL += '?ssl_cert_reqs=CERT_NONE'
-    elif 'ssl_cert_reqs' not in REDIS_URL:
-        REDIS_URL += '&ssl_cert_reqs=CERT_NONE'
 
 # Create Celery app
 celery_app = Celery(
