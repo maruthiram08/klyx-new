@@ -4,9 +4,7 @@
 
 import { Debt, DebtScenario } from '../types/debt';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL
-  ? `${process.env.NEXT_PUBLIC_API_URL}/api`
-  : 'http://127.0.0.1:5001/api';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5001/api';
 
 /**
  * Get auth token from localStorage
