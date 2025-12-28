@@ -225,6 +225,108 @@ class ScreenerPresets:
         }
 
     @staticmethod
+    def minervini_trend() -> Dict:
+        """Minervini Trend Template - Stage 2 Uptrend"""
+        return {
+            "name": "Minervini Trend Template",
+            "description": "Stocks in strong Stage 2 uptrend (Price > SMAs, Near Highs)",
+            "filters": [
+                {"field": "Current Price", "operator": "gt_field", "value": "Day SMA200"},
+                {"field": "Current Price", "operator": "gt_field", "value": "Day SMA50"},
+                {"field": "Day SMA50", "operator": "gt_field", "value": "Day SMA200"},
+                {"field": "Current Price", "operator": "gt_field_factor", "value": ["52 Week Low", 1.3]},
+                {"field": "Current Price", "operator": "gt_field_factor", "value": ["52 Week High", 0.75]},
+            ],
+            "sort": {"field": "Trendlyne Momentum Score", "order": "desc"},
+        }
+
+    @staticmethod
+    def golden_crossover() -> Dict:
+        """Golden Crossover Strategy"""
+        return {
+            "name": "Golden Crossover",
+            "description": "Bullish Signal: 50 Day SMA > 200 Day SMA",
+            "filters": [
+                {"field": "Day SMA50", "operator": "gt_field", "value": "Day SMA200"},
+                {"field": "Current Price", "operator": "gt_field", "value": "Day SMA50"},
+                {"field": "Day RSI", "operator": "gt", "value": 50},
+            ],
+            "sort": {"field": "Day change %", "order": "desc"},
+        }
+
+    @staticmethod
+    def rsi_oversold() -> Dict:
+        """RSI Oversold Strategy"""
+        return {
+            "name": "RSI Oversold Bounce",
+            "description": "Potential reversal candidates (RSI < 30)",
+            "filters": [
+                {"field": "Day RSI", "operator": "lt", "value": 30},
+                {"field": "Day RSI", "operator": "gt", "value": 0}, 
+                {"field": "Market Capitalization", "operator": "gt", "value": 500},
+            ],
+            "sort": {"field": "Day RSI", "order": "asc"},
+        }
+
+    @staticmethod
+    def momentum_master() -> Dict:
+        """Momentum Master Strategy"""
+        return {
+            "name": "Momentum Master",
+            "description": "High Momentum Score + Technical Strength",
+            "filters": [
+                {"field": "Trendlyne Momentum Score", "operator": "gte", "value": 70},
+                {"field": "Day RSI", "operator": "gt", "value": 55},
+                {"field": "Current Price", "operator": "gt_field", "value": "Day SMA50"},
+            ],
+            "sort": {"field": "Trendlyne Momentum Score", "order": "desc"},
+        }
+
+    @staticmethod
+    def smart_money() -> Dict:
+        """Smart Money Accumulation"""
+        # Finds stocks with high Institutional holding (FII + DII)
+        return {
+            "name": "Big Fish Accumulation",
+            "description": "High Institutional Ownership (>25%) + Promoters (>40%)",
+            "filters": [
+                {"field": "Promoter holding latest %", "operator": "gt", "value": 40},
+                {"field": "Institutional holding current Qtr %", "operator": "gt", "value": 25},
+            ],
+            "sort": {"field": "Institutional holding current Qtr %", "order": "desc"},
+        }
+
+    @staticmethod
+    def magic_formula() -> Dict:
+        """
+        Greenblatt's Magic Formula: High Return on Capital (ROCE) + High Earnings Yield.
+        """
+        return {
+            "name": "Magic Formula (Value)",
+            "description": "High Quality (ROCE > 20%) available at a Bargain (Earnings Yield > 5%).",
+            "filters": [
+                {"field": "roce_annual_pct", "operator": "gt", "value": 20},
+                {"field": "earnings_yield_pct", "operator": "gt", "value": 5},
+                {"field": "market_cap", "operator": "gt", "value": 500}, # Exclude microcaps
+            ]
+        }
+
+    @staticmethod
+    def canslim_growth() -> Dict:
+        """
+        CANSLIM Style Growth: High Earnings Growth + Price Leadership (Relative Strength).
+        """
+        return {
+            "name": "CANSLIM Growth",
+            "description": "High EPS Growth (>20%) with Price Leadership (RS > 80).",
+            "filters": [
+                {"field": "eps_growth_pct", "operator": "gt", "value": 20},
+                {"field": "rel_strength_score", "operator": "gt", "value": 80},
+                {"field": "current_price", "operator": "gt", "value": 50}, # Avoid penny stocks
+            ]
+        }
+
+    @staticmethod
     def all_presets() -> Dict[str, Dict]:
         """Get all preset strategies"""
         return {
@@ -236,6 +338,13 @@ class ScreenerPresets:
             "garp": ScreenerPresets.undervalued_growth(),
             "breakout": ScreenerPresets.breakout_stocks(),
             "low_volatility": ScreenerPresets.low_volatility(),
+            "minervini_trend": ScreenerPresets.minervini_trend(),
+            "golden_crossover": ScreenerPresets.golden_crossover(),
+            "rsi_oversold": ScreenerPresets.rsi_oversold(),
+            "momentum_master": ScreenerPresets.momentum_master(),
+            "smart_money": ScreenerPresets.smart_money(),
+            "magic_formula": ScreenerPresets.magic_formula(),
+            "canslim_growth": ScreenerPresets.canslim_growth(),
         }
 
 
@@ -254,6 +363,46 @@ class ScreenerService:
         self.data = data.copy()
         self.original_count = len(data)
 
+        return self.data[mask]
+    
+    def _apply_field_comparison(self, field: str, operator_name: str, value: Any) -> pd.DataFrame:
+        """Apply field-to-field comparison for pandas dataframe"""
+        try:
+            op_map = {
+                "gt_field": ">",
+                "lt_field": "<",
+                "gt_field_factor": ">",
+                "lt_field_factor": "<"
+            }
+            
+            if operator_name in ["gt_field", "lt_field"]:
+                other_field = value
+                if other_field not in self.data.columns:
+                    return pd.DataFrame() # fail safe
+                
+                if operator_name == "gt_field":
+                    mask = self.data[field] > self.data[other_field]
+                else:
+                    mask = self.data[field] < self.data[other_field]
+                    
+            elif operator_name in ["gt_field_factor", "lt_field_factor"]:
+                # value is [other_field, factor]
+                other_field, factor = value
+                if other_field not in self.data.columns:
+                    return pd.DataFrame()
+                
+                if operator_name == "gt_field_factor":
+                    mask = self.data[field] > (self.data[other_field] * factor)
+                else:
+                    mask = self.data[field] < (self.data[other_field] * factor)
+            else:
+                return self.data
+                
+            return self.data[mask]
+        except Exception as e:
+            logger.error(f"Error in field comparison: {e}")
+            return self.data
+    
     def apply_filter(self, field: str, operator_name: str, value: Any) -> pd.DataFrame:
         """Apply a single filter to the dataset"""
         if field not in self.data.columns:
@@ -263,6 +412,10 @@ class ScreenerService:
         # Handle special operators
         if operator_name in ["top", "bottom"]:
             return self._apply_ranking_filter(field, operator_name, value)
+            
+        # Handle field comparisons
+        if operator_name in ["gt_field", "lt_field", "gt_field_factor", "lt_field_factor"]:
+             return self._apply_field_comparison(field, operator_name, value)
 
         # Apply standard filter
         mask = self.data[field].apply(

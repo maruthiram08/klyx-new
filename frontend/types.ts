@@ -142,6 +142,14 @@ export interface Stock {
   "Data Quality Score"?: number;
   "Data Sources"?: string;
   "Last Updated"?: string;
+
+  // New DB Columns (Snake Case)
+  durability_score?: number;
+  valuation_score?: number;
+  momentum_score?: number;
+  target_price?: number;
+  recommendation_key?: string;
+  analyst_count?: number;
 }
 
 export interface FundamentalRecord {

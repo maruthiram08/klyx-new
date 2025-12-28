@@ -1,3 +1,5 @@
+'use client';
+
 import React, { useState, useMemo, useEffect } from 'react';
 import { Container } from './ui/Container';
 import { Typography } from './ui/Typography';
@@ -28,13 +30,22 @@ const API_BASE = 'http://127.0.0.1:5001/api';
 
 interface StockDetailsProps {
     stock: Stock;
+    initialFundamentals?: FundamentalData | null;
     onBack?: () => void;
 }
 
-const StockDetails: React.FC<StockDetailsProps> = ({ stock, onBack }) => {
+const StockDetails: React.FC<StockDetailsProps> = ({ stock, initialFundamentals, onBack }) => {
     const [activeTab, setActiveTab] = useState('Overview');
     const [financialsType, setFinancialsType] = useState<'standalone' | 'consolidated'>('standalone');
-    const [fundamentals, setFundamentals] = useState<FundamentalData | null>(null);
+    const [fundamentals, setFundamentals] = useState<FundamentalData | null>(initialFundamentals || null);
+
+    // Reset fundamentals if stock changes (unlikely in this context but good practice)
+    useEffect(() => {
+        if (initialFundamentals) {
+            setFundamentals(initialFundamentals);
+        }
+    }, [initialFundamentals]);
+
     const analysisSections = useMemo(() => generateStockAnalysis(stock, fundamentals), [stock, fundamentals]);
     const financialInsights = useMemo(() => generateFinancialInsights(fundamentals), [fundamentals]);
 
@@ -67,6 +78,11 @@ const StockDetails: React.FC<StockDetailsProps> = ({ stock, onBack }) => {
     useEffect(() => {
         const fetchFundamentals = async () => {
             if (!stock['NSE Code']) return;
+
+            // Skip fetch if we already have data matching the requested type
+            // (Assumes initialFundamentals is 'standalone' by default)
+            // But if user switches types, we MUST fetch.
+
             try {
                 const res = await fetch(`${API_BASE}/stock/${stock['NSE Code']}/fundamentals?type=${financialsType}`);
                 if (res.ok) {
@@ -79,6 +95,30 @@ const StockDetails: React.FC<StockDetailsProps> = ({ stock, onBack }) => {
                 console.error("Failed to fetch fundamentals", error);
             }
         };
+
+        // Only fetch if:
+        // 1. We don't have fundamentals yet (shouldn't happen with SSR)
+        // 2. OR we have fundamentals but the user requested a different type (e.g. consolidated)
+        // Note: We need a way to know if current fundamentals are standalone or consolidated.
+        // For now, simpler heuristic: always fetch if financialsType changes.
+        // But to avoid double-fetch on mount (when type is 'standalone'), we check if initialized.
+
+        const isDefaultType = financialsType === 'standalone';
+        const hasInitialData = !!initialFundamentals;
+
+        // If we just mounted with initial data and type is default, DO NOT fetch.
+        // But we need to track if this is the *first* render.
+        // Actually, simplest is: if we have data, don't fetch unless we know strict type mismatch.
+        // Let's rely on the user switching the toggle to trigger re-fetch.
+
+        // We'll use a Ref to track if we should skip the first effect run if data exists.
+        // But actually, useEffect runs after render.
+
+        if (isDefaultType && hasInitialData && fundamentals === initialFundamentals) {
+            // Do nothing, we are good.
+            return;
+        }
+
         fetchFundamentals();
     }, [stock, financialsType]);
 
@@ -111,16 +151,18 @@ const StockDetails: React.FC<StockDetailsProps> = ({ stock, onBack }) => {
 
     const marketCapCr = (Number(stock['Market Capitalization'] || 0) / 10000000).toFixed(2) + ' Cr';
 
-    const durabilityScore = Math.round(Number(stock['Trendlyne Durability Score'] || 0));
-    const valuationScore = Math.round(Number(stock['Trendlyne Valuation Score'] || 0));
-    const momentumScore = Math.round(Number(stock['Trendlyne Momentum Score'] || 0));
+    const durabilityScore = Math.round(Number(stock.durability_score || 0));
+    const valuationScore = Math.round(Number(stock.valuation_score || 0));
+    const momentumScore = Math.round(Number(stock.momentum_score || 0));
 
     const headlines = stock['News_Headlines'] && stock['News_Headlines'] !== '[]'
         ? JSON.parse(stock['News_Headlines'])
         : [];
 
-    const upside = Number(stock['Forecaster Estimates 12Mth Upside %'] || 0);
-    const targetPrice = Number(stock['Forecaster Estimates Target Price'] || 0);
+    const targetPrice = Number(stock.target_price || 0);
+    const recommendationKey = stock.recommendation_key || null;
+    const analystCount = Number(stock.analyst_count || 0);
+    const upside = targetPrice > 0 && price > 0 ? ((targetPrice - price) / price) * 100 : 0;
 
     // --- Render Functions ---
 
@@ -253,17 +295,37 @@ const StockDetails: React.FC<StockDetailsProps> = ({ stock, onBack }) => {
                     <div className="w-px bg-white/10 hidden md:block"></div>
 
                     <div className="flex-1 z-10 flex flex-col justify-center">
-                        <Typography variant="h3" className="mb-4 text-white">1Y Forecast</Typography>
-                        <div className="flex items-baseline gap-2 mb-2">
-                            <Typography variant="display" className="text-[#ccf32f] text-4xl">
-                                {targetPrice > 0 ? formatCurrency(targetPrice) : 'N/A'}
-                            </Typography>
-                        </div>
-                        <div className="flex items-center gap-2 mb-6">
-                            <Badge variant={upside > 0 ? 'success' : 'danger'}>
-                                {upside > 0 ? `+${upside.toFixed(1)}%` : `${upside.toFixed(1)}%`} Upside
-                            </Badge>
-                        </div>
+                        <Typography variant="h3" className="mb-4 text-white">Forecaster</Typography>
+                        {analystCount > 0 ? (
+                            <>
+                                <div className="flex items-baseline gap-2 mb-2">
+                                    <Typography variant="display" className="text-[#ccf32f] text-4xl">
+                                        {formatCurrency(targetPrice)}
+                                    </Typography>
+                                    <span className={`text-sm font-medium ${upside > 0 ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                        ({formatPercentage(upside)} Upside)
+                                    </span>
+                                </div>
+                                <div className="flex gap-4 mt-2">
+                                    <div className="bg-white/10 px-3 py-1 rounded-full text-xs text-neutral-300">
+                                        Target Price
+                                    </div>
+                                    <div className="bg-[#ccf32f]/20 px-3 py-1 rounded-full text-xs text-[#ccf32f] font-bold capitalize">
+                                        {recommendationKey?.replace('_', ' ') || 'Rated'}
+                                    </div>
+                                    <div className="bg-white/10 px-3 py-1 rounded-full text-xs text-neutral-300">
+                                        {analystCount} Analysts
+                                    </div>
+                                </div>
+                            </>
+                        ) : (
+                            <div className="text-neutral-400 py-4">
+                                <Typography variant="body" className="mb-1">No Analyst Coverage</Typography>
+                                <Typography variant="caption" className="text-neutral-500">
+                                    Not enough data to provide price targets.
+                                </Typography>
+                            </div>
+                        )}
                         <div className="bg-white/5 rounded-xl p-4 border border-white/5">
                             <div className="flex justify-between items-center">
                                 <span className="text-xs text-neutral-400 uppercase tracking-wider">Consensus</span>

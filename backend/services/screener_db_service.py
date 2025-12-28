@@ -68,8 +68,16 @@ class DatabaseScreener:
         "Dividend Yield Annual %": "dividend_yield_pct",
         "Promoter holding latest %": "promoter_holding_pct",
         "FII holding current Qtr %": "fii_holding_pct",
+        "DII holding current Qtr %": "dii_holding_pct",
         "MF holding current Qtr %": "mf_holding_pct",
         "Data Quality Score": "data_quality_score",
+        "52 Week High": "m.week_52_high",
+        "52 Week Low": "m.week_52_low",
+        "Durability Score": "durability_score",
+        "Valuation Score": "valuation_score",
+        "ROCE Annual %": "roce_annual_pct",
+        "Earnings Yield %": "earnings_yield_pct",
+        "Relative Strength": "rel_strength_score",
     }
 
     # Operator mapping to SQL
@@ -139,10 +147,22 @@ class DatabaseScreener:
             elif operator == "contains":
                 clauses.append(f"{field} LIKE ?")
                 params.append(f"%{value}%")
+            elif operator in ["gt_field", "lt_field"]:
+                target_field = self._map_field(value)
+                op = ">" if operator == "gt_field" else "<"
+                clauses.append(f"{field} {op} {target_field}")
+            elif operator in ["gt_field_factor", "lt_field_factor"]:
+                # value is [target_field_name, factor]
+                target_field = self._map_field(value[0])
+                factor = float(value[1])
+                op = ">" if operator == "gt_field_factor" else "<"
+                clauses.append(f"{field} {op} ({target_field} * ?)")
+                params.append(factor)
             else:
                 sql_op = self.OPERATOR_SQL.get(operator, "=")
                 clauses.append(f"{field} {sql_op} ?")
                 params.append(value)
+
 
         return (" AND ".join(clauses), tuple(params))
 
@@ -206,6 +226,7 @@ class DatabaseScreener:
             SELECT 
             {select_clause}
             FROM stocks
+            LEFT JOIN stock_metadata m ON stocks.id = m.stock_id
             WHERE {where_clause}
               AND data_quality_score >= 30
             {order_clause}
@@ -289,13 +310,18 @@ class DatabaseScreener:
         """Get statistics for a field"""
         db_field = self._map_field(field)
 
+        # Handle fields from metadata table
+        table_source = "stocks"
+        if "m." in db_field:
+            table_source = "stocks LEFT JOIN stock_metadata m ON stocks.id = m.stock_id"
+
         query = f"""
             SELECT
                 COUNT({db_field}) as count,
                 MIN({db_field}) as min,
                 MAX({db_field}) as max,
                 AVG({db_field}) as mean
-            FROM stocks
+            FROM {table_source}
             WHERE {db_field} IS NOT NULL
               AND data_quality_score >= 30
         """

@@ -3,10 +3,10 @@ import os
 import re
 
 # Configuration
-# Configuration
-directory = '/Users/maruthi/Desktop/MainDirectory/weekendanalysis tool/backend/datasource'
-output_file = '/Users/maruthi/Desktop/MainDirectory/weekendanalysis tool/backend/nifty50_unified_master.xlsx'
-enriched_file = '/Users/maruthi/Desktop/MainDirectory/weekendanalysis tool/backend/nifty50_enriched.xlsx'
+backend_dir = os.path.dirname(os.path.abspath(__file__))
+directory = os.path.join(backend_dir, 'datasource')
+output_file = os.path.join(backend_dir, 'nifty50_unified_master.xlsx')
+enriched_file = os.path.join(backend_dir, 'nifty50_enriched.xlsx')
 test_file_prefix = 'test_'
 
 def get_source_files():

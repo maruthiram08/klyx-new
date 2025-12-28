@@ -33,13 +33,13 @@ class CallbackTask(Task):
 
 
 @celery_app.task(bind=True, base=CallbackTask, name='tasks.process_portfolio')
-def process_portfolio_task(self, user_id, use_multi_source=False):
+def process_portfolio_task(self, user_id, use_multi_source=True):
     """
-    Background task to process portfolio data.
+    Background task to process portfolio data via Database.
     
     Args:
         user_id: User ID who requested the processing
-        use_multi_source: Whether to use multi-source enrichment
+        use_multi_source: Always True (defaults to parallel multi-source)
         
     Returns:
         dict: Processing results
@@ -47,41 +47,75 @@ def process_portfolio_task(self, user_id, use_multi_source=False):
     logger.info(f"Starting portfolio processing for user {user_id}")
     
     try:
-        import clean_data
-        import enrich_data
-        import generate_insights
+        from app import app, db
+        from models import UserPortfolio, UserAnalysis
+        from services.multi_source_data_service import multi_source_service
         
-        # Step 1: Clean data (33% progress)
-        self.update_progress(1, 3, "Cleaning and merging data files...")
-        logger.info("Step 1/3: Cleaning data...")
-        clean_data.main()
-        
-        # Step 2: Enrich data (66% progress)
-        self.update_progress(2, 3, "Enriching with external data sources...")
-        logger.info("Step 2/3: Enriching data...")
-        
-        if use_multi_source:
-            import enrich_data_v2
-            enrich_data_v2.main()
-        else:
-            enrich_data.main()
-        
-        # Step 3: Generate insights (100% progress)
-        self.update_progress(3, 3, "Generating insights and analysis...")
-        logger.info("Step 3/3: Generating insights...")
-        generate_insights.main()
-        
-        logger.info(f"Portfolio processing completed for user {user_id}")
-        
-        return {
-            'status': 'completed',
-            'user_id': user_id,
-            'message': 'Portfolio analysis completed successfully',
-            'timestamp': time.time()
-        }
+        with app.app_context():
+            # Step 1: Fetch User Portfolio (10% progress)
+            self.update_progress(10, 100, "Fetching portfolio from database...")
+            portfolio_items = UserPortfolio.query.filter_by(user_id=user_id).all()
+            
+            if not portfolio_items:
+                return {
+                    'status': 'error',
+                    'user_id': user_id,
+                    'message': 'No stocks found in portfolio. Please add stocks first.'
+                }
+            
+            symbols = [item.stock_name for item in portfolio_items]
+            logger.info(f"Found {len(symbols)} stocks for user {user_id}: {symbols}")
+            
+            # Step 2: Enrich Data (Parallel) (50% progress)
+            self.update_progress(20, 100, f"Enriching {len(symbols)} stocks (Parallel)...")
+            
+            # Use parallel fetching (max 10 workers)
+            enrichment_results = multi_source_service.fetch_multiple_stocks(
+                symbols, max_workers=10
+            )
+            
+            # Step 3: Save to UserAnalysis (90% progress)
+            self.update_progress(80, 100, "Saving analysis results...")
+            
+            # Clear old analysis for this user (full refresh)
+            # Or should we upsert? Full refresh is cleaner for now to avoid duplicates/stale
+            UserAnalysis.query.filter_by(user_id=user_id).delete()
+            
+            saved_count = 0
+            for symbol, result in enrichment_results.items():
+                data = result.get('data', {})
+                quality = result.get('quality', {})
+                
+                # Create analysis record
+                analysis = UserAnalysis(
+                    user_id=user_id,
+                    stock_name=symbol,
+                    nse_code=symbol, # Assume symbol is code for now
+                    analysis_data={
+                        **data, 
+                        "_quality": quality
+                    }
+                )
+                db.session.add(analysis)
+                saved_count += 1
+            
+            db.session.commit()
+            
+            self.update_progress(100, 100, "Portfolio analysis complete!")
+            logger.info(f"Saved {saved_count} analysis records for user {user_id}")
+            
+            return {
+                'status': 'completed',
+                'user_id': user_id,
+                'message': f'Successfully analyzed {saved_count} stocks',
+                'timestamp': time.time()
+            }
         
     except Exception as e:
         logger.error(f"Portfolio processing failed for user {user_id}: {str(e)}")
+        # Log full traceback
+        import traceback
+        logger.error(traceback.format_exc())
         raise
 
 

@@ -1,56 +1,41 @@
-'use client';
-
-import React, { useState, useEffect } from 'react';
-import { useRouter, useParams } from 'next/navigation';
-import { api } from '../../../api';
-import { Stock } from '../../../types';
+import React from 'react';
 import StockDetails from '../../../components/StockDetails';
 import { Typography } from '../../../components/ui/Typography';
+import { Stock, FundamentalData } from '../../../types';
 
-export default function StockDetailsPage() {
-    const router = useRouter();
-    const params = useParams();
-    const code = params.code as string;
+// Force dynamic rendering since we fetch fresh data
+export const dynamic = 'force-dynamic';
 
-    const [stock, setStock] = useState<Stock | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+async function getStockData(code: string) {
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5001/api';
 
-    useEffect(() => {
-        const fetchStock = async () => {
-            setLoading(true);
-            try {
-                const res = await api.getStockDetails(code);
-                if (res.status === 'success') {
-                    setStock(res.data);
-                } else {
-                    setError(res.message || 'Stock not found');
-                }
-            } catch (err) {
-                console.error(err);
-                setError('Failed to load stock details');
-            } finally {
-                setLoading(false);
-            }
+    try {
+        const [stockRes, fundRes] = await Promise.all([
+            fetch(`${API_BASE}/stock/${code}`, { next: { revalidate: 60 } }),
+            fetch(`${API_BASE}/stock/${code}/fundamentals?type=standalone`, { next: { revalidate: 300 } }) // Cache fundamentals longer
+        ]);
+
+        if (!stockRes.ok) throw new Error('Failed to fetch stock');
+
+        const stockJson = await stockRes.json();
+        const fundJson = await fundRes.json();
+
+        return {
+            stock: stockJson.status === 'success' ? stockJson.data : null,
+            fundamentals: fundJson.status === 'success' ? fundJson.data : null,
+            error: null
         };
-
-        if (code) {
-            fetchStock();
-        }
-    }, [code]);
-
-    if (loading) {
-        return (
-            <div className="flex h-screen items-center justify-center bg-[#F8FAFB]">
-                <div className="flex flex-col items-center gap-4">
-                    <div className="w-12 h-12 border-4 border-[#ccf32f] border-t-black rounded-full animate-spin shadow-lg"></div>
-                    <Typography variant="body" className="text-neutral-400 font-medium animate-pulse">
-                        Loading Analysis...
-                    </Typography>
-                </div>
-            </div>
-        );
+    } catch (err) {
+        console.error("Server Fetch Error:", err);
+        return { stock: null, fundamentals: null, error: 'Failed to load stock data' };
     }
+}
+
+export default async function StockDetailsPage({ params }: { params: { code: string } }) {
+    const { code } = params;
+
+    // Server-side Fetch
+    const { stock, fundamentals, error } = await getStockData(code);
 
     if (error || !stock) {
         return (
@@ -58,12 +43,13 @@ export default function StockDetailsPage() {
                 <div className="text-center">
                     <Typography variant="h3" className="mb-2">Stock Not Found</Typography>
                     <p className="text-neutral-500 mb-4">{error || "Could not find stock data."}</p>
-                    <button
-                        onClick={() => router.back()}
-                        className="px-6 py-2 bg-black text-white rounded-full hover:shadow-lg transition-all"
+                    {/* Since this is server component, we can use simple anchor tag or client component for back button if needed */}
+                    <a
+                        href="/stocks"
+                        className="px-6 py-2 bg-black text-white rounded-full hover:shadow-lg transition-all inline-block"
                     >
                         Go Back
-                    </button>
+                    </a>
                 </div>
             </div>
         );
@@ -72,7 +58,7 @@ export default function StockDetailsPage() {
     return (
         <StockDetails
             stock={stock}
-            onBack={() => router.push('/stocks')}
+            initialFundamentals={fundamentals}
         />
     );
 }

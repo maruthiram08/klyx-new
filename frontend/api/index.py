@@ -10,7 +10,7 @@ import sys
 # Add backend to Python path
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "backend"))
 
-from flask import Flask
+from flask import Flask, request
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager
 
@@ -157,8 +157,56 @@ def root():
             "debt_optimizer": "/api/debt-optimizer/*",
             "screener": "/api/screener/*",
             "database": "/api/database/*",
+            "screener": "/api/screener/*",
+            "database": "/api/database/*",
+            "cron": "/api/cron/refresh (GET)",
         },
     }
+
+
+# Cron Job Endpoint (called by Vercel Cron)
+@app.route("/api/cron/refresh", methods=["GET"])
+def cron_refresh():
+    """
+    Trigger background worker to enrich stocks.
+    Called by Vercel Cron (see vercel.json).
+    """
+    try:
+        import requests
+        
+        # Verify Cron Authorization (Vercel sends this header)
+        auth_header = request.headers.get('Authorization')
+        # Note: For strict security, verify `CRON_SECRET` if configured in Vercel
+        
+        worker_url = os.environ.get("RENDER_WORKER_URL")
+        worker_key = os.environ.get("WORKER_API_KEY")
+        
+        if not worker_url:
+            return {"status": "error", "message": "RENDER_WORKER_URL not configured"}, 500
+            
+        # Trigger enrichment on Render Worker
+        # We use a Fire-and-Forget approach or wait? Vercel times out in 10s.
+        # So we should just trigger and return.
+        
+        headers = {"X-API-Key": worker_key} if worker_key else {}
+        target_url = f"{worker_url}/worker/enrich"
+        
+        # Payload for worker
+        payload = {"batch_size": 20} # Process 20 stocks per run
+        
+        print(f"Triggering worker at: {target_url}")
+        response = requests.post(target_url, json=payload, headers=headers, timeout=5)
+        
+        return {
+            "status": "success", 
+            "message": "Worker triggered", 
+            "worker_status": response.status_code,
+            "worker_response": response.json() if response.ok else response.text
+        }
+        
+    except Exception as e:
+        print(f"Cron failed: {e}")
+        return {"status": "error", "message": str(e)}, 500
 
 
 # For local testing

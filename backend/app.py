@@ -8,6 +8,7 @@ import pandas as pd
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from dotenv import load_dotenv
+from flask_jwt_extended import jwt_required, get_jwt_identity
 
 # Load environment variables from project root
 env_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", ".env.local")
@@ -16,8 +17,7 @@ load_dotenv()
 
 # Add current directory to path so imports work
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-# Also allow importing from current directory if needed
-sys.path.append("/Users/maruthi/Desktop/MainDirectory/weekendanalysis tool/backend")
+
 
 import clean_data
 import enrich_data
@@ -54,12 +54,29 @@ from chat_routes import chat_bp
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
+# Use Redis for rate limiting in production (shared across workers)
+def get_rate_limit_storage():
+    redis_url = os.environ.get("REDIS_URL")
+    if redis_url:
+        # Handle Upstash SSL requirements
+        if 'upstash.io' in redis_url:
+            if redis_url.startswith('redis://'):
+                redis_url = redis_url.replace('redis://', 'rediss://', 1)
+            if '?' not in redis_url:
+                redis_url += '?ssl_cert_reqs=CERT_NONE'
+            elif 'ssl_cert_reqs' not in redis_url:
+                redis_url += '&ssl_cert_reqs=CERT_NONE'
+        return redis_url
+    return "memory://"
+
 limiter = Limiter(
     key_func=get_remote_address,
     app=app,
     default_limits=["1000 per hour", "100 per minute"],
-    storage_uri="memory://",  # Use Redis in production: os.environ.get("REDIS_URL", "memory://")
+    storage_uri=get_rate_limit_storage(),
 )
+print(f"✓ Rate limiter storage: {'Redis' if os.environ.get('REDIS_URL') else 'In-Memory'}")
+
 
 # Initialize extensions
 db.init_app(app)
@@ -122,26 +139,85 @@ except Exception as e:
 
 
 @app.route("/api/upload", methods=["POST"])
+@jwt_required(optional=True)
 def upload_files():
+    user_id = get_jwt_identity()
+    if not user_id:
+        return jsonify({"status": "error", "message": "Authentication required for portfolio analysis"}), 401
+
     if "files[]" not in request.files:
         return jsonify({"status": "error", "message": "No file part"}), 400
 
     files = request.files.getlist("files[]")
     saved_files = []
+    stocks_added = 0
+    
+    from models import UserPortfolio, db
 
     for file in files:
         if file.filename == "":
             continue
         if file:
             filename = file.filename
-            file.save(os.path.join(app.config["UPLOAD_FOLDER"], filename))
-            saved_files.append(filename)
+            # Process file immediately to DB (don't rely on fs)
+            try:
+                # Read file into pandas
+                if filename.endswith('.csv'):
+                    df = pd.read_csv(file)
+                else:
+                    df = pd.read_excel(file)
+                
+                # Normalize columns
+                df.columns = df.columns.astype(str).str.strip()
+                
+                # Find stock column
+                stock_col = None
+                code_col = None
+                
+                possible_names = ['Stock Name', 'Symbol', 'Ticker', 'Company']
+                possible_codes = ['NSE Code', 'ISIN', 'Symbol', 'Code']
+                
+                for col in df.columns:
+                    if col in possible_names:
+                        stock_col = col
+                    if col in possible_codes:
+                        code_col = col
+                        
+                if stock_col:
+                    stocks = df[stock_col].dropna().unique()
+                    
+                    # Add to UserPortfolio
+                    for stock in stocks:
+                        stock_name = str(stock).strip()
+                        if not stock_name:
+                            continue
+                            
+                        # Check exist
+                        existing = UserPortfolio.query.filter_by(
+                            user_id=user_id, 
+                            stock_name=stock_name
+                        ).first()
+                        
+                        if not existing:
+                            new_item = UserPortfolio(
+                                user_id=user_id,
+                                stock_name=stock_name
+                            )
+                            db.session.add(new_item)
+                            stocks_added += 1
+                    
+                    db.session.commit()
+                    saved_files.append(filename)
+            except Exception as e:
+                print(f"Error processing file {filename}: {e}")
+                return jsonify({"status": "error", "message": f"Failed to process {filename}: {str(e)}"}), 500
 
     return jsonify(
         {
             "status": "success",
-            "message": f"Uploaded {len(saved_files)} files.",
+            "message": f"Processed {len(saved_files)} files. Added {stocks_added} new stocks to portfolio.",
             "files": saved_files,
+            "stocks_added": stocks_added
         }
     )
 
@@ -178,35 +254,30 @@ def use_sample():
 
 
 @app.route("/api/process", methods=["POST"])
+@jwt_required(optional=True)
 def process_data():
     """
     Start background portfolio processing task.
     Returns task ID for status tracking.
-    
-    Note: Requires Redis and Celery worker to be running.
-    If Celery is not available, falls back to synchronous processing.
     """
+    user_id = get_jwt_identity()
+    if not user_id:
+        # Fallback for dev/testing if needed, but DB-first requires user context
+        return jsonify({"status": "error", "message": "Login required to process portfolio"}), 401
+
     try:
-        # Check if user wants to use new multi-source enrichment
-        use_multi_source = (
-            request.json.get("use_multi_source", False) if request.json else False
-        )
-        
+        # Check if portfolio has items
+        from models import UserPortfolio
+        count = UserPortfolio.query.filter_by(user_id=user_id).count()
+        if count == 0:
+             return jsonify({"status": "error", "message": "Portfolio is empty. Please upload stocks first."}), 400
+
         # Try to use Celery for background processing
         try:
-            from celery_app import celery_app
             from tasks.portfolio_tasks import process_portfolio_task
             
-            # Get user ID if authenticated
-            user_id = "anonymous"
-            try:
-                from flask_jwt_extended import get_jwt_identity
-                user_id = get_jwt_identity() or "anonymous"
-            except:
-                pass
-            
-            # Start background task
-            task = process_portfolio_task.delay(user_id, use_multi_source)
+            # Start background task (always use multi-source)
+            task = process_portfolio_task.delay(user_id, use_multi_source=True)
             
             return jsonify({
                 "status": "processing",
@@ -216,31 +287,26 @@ def process_data():
             })
             
         except Exception as celery_error:
-            # Celery not available, fall back to synchronous processing
-            print(f"Celery not available ({celery_error}), using synchronous processing...")
+            # Fallback to synchronous processing (using task logic directly)
+            print(f"Celery error ({celery_error}), running synchronously...")
+            from tasks.portfolio_tasks import process_portfolio_task
             
-            print("Step 1: Cleaning Data...")
-            clean_data.main()
-
-            if use_multi_source:
-                print("Step 2: Enriching Data (Multi-Source Strategy)...")
-                import enrich_data_v2
-                enrich_data_v2.main()
-            else:
-                print("Step 2: Enriching Data (yfinance)...")
-                enrich_data.main()
-
-            print("Step 3: Generating Insights...")
-            generate_insights.main()
-
-            return jsonify(
-                {"status": "success", "message": "Pipeline completed successfully."}
-            )
-
+            # Run synchronously (blocking)
+            # We use apply() to run the task locally
+            result = process_portfolio_task.apply(args=[user_id, True])
+            
+            # Since it's sync, user will wait (might timeout on Vercel if >10s)
+            return jsonify({
+                 "status": "completed",
+                 "message": "Portfolio processed successfully (Synchronous)",
+                 "data": "Refresh results page"
+            })
+            
     except Exception as e:
         import traceback
         traceback.print_exc()
         return jsonify({"status": "error", "message": str(e)}), 500
+
 
 
 @app.route("/api/process/status/<task_id>", methods=["GET"])
@@ -307,24 +373,37 @@ def get_multi_source_data(symbol):
 
 
 @app.route("/api/results", methods=["GET"])
+@jwt_required(optional=True)
 def get_results():
-    # Output file is generated in backend/
-    output_file = "backend/nifty50_final_analysis.xlsx"
+    user_id = get_jwt_identity()
+    
+    # If anonymous, we can't fetch personalized results easily unless we track session
+    # For now, require auth or return empty
+    if not user_id:
+        return jsonify({"status": "error", "message": "Login required to view analysis results"}), 401
+
     try:
-        if os.path.exists(output_file):
-            df = pd.read_excel(output_file)
-            df = df.astype(object)
-            df = df.replace([np.inf, -np.inf], None)
-            df = df.where(pd.notnull(df), None)
-            records = df.to_dict(orient="records")
-            return jsonify({"status": "success", "data": records})
-        else:
-            return jsonify(
-                {
-                    "status": "error",
-                    "message": "No analysis file found. Run processing first.",
-                }
-            ), 404
+        from models import UserAnalysis
+        
+        # Fetch from DB
+        analyses = UserAnalysis.query.filter_by(user_id=user_id).all()
+        
+        if not analyses:
+            return jsonify({
+                "status": "error", 
+                "message": "No analysis found. Please upload portfolio and click Process."
+            }), 404
+            
+        # Convert to list of dicts
+        # Flatten the structure: merge metadata with analysis_data
+        records = []
+        for analysis in analyses:
+            record = analysis.analysis_data or {}
+            record['Stock Name'] = analysis.stock_name
+            record['NSE Code'] = analysis.nse_code
+            records.append(record)
+            
+        return jsonify({"status": "success", "data": records})
 
     except Exception as e:
         return jsonify({"status": "error", "message": str(e)}), 500

@@ -19,6 +19,16 @@ CREATE TABLE IF NOT EXISTS user_portfolio (
     CONSTRAINT unique_user_stock UNIQUE(user_id, stock_name)
 );
 
+CREATE TABLE IF NOT EXISTS user_analysis (
+    id SERIAL PRIMARY KEY,
+    user_id VARCHAR(36) REFERENCES users(id) ON DELETE CASCADE,
+    stock_name VARCHAR(255) NOT NULL,
+    nse_code VARCHAR(50),
+    analysis_data JSONB, -- Stores full enriched data
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT unique_user_analysis UNIQUE(user_id, stock_name)
+);
+
 CREATE TABLE IF NOT EXISTS debt_scenarios (
     id SERIAL PRIMARY KEY,
     user_id VARCHAR(36) REFERENCES users(id) ON DELETE CASCADE,
@@ -96,6 +106,16 @@ CREATE TABLE IF NOT EXISTS stocks (
 
     -- Momentum
     momentum_score INTEGER,
+    rel_strength_score INTEGER,
+    target_price DECIMAL(10,2),
+    recommendation_key VARCHAR(50),
+    analyst_count INTEGER,
+    durability_score INTEGER,
+    valuation_score INTEGER,
+
+    -- Magic Formula
+    roce_annual_pct DECIMAL(10, 4),
+    earnings_yield_pct DECIMAL(10, 4),
 
     -- Dividends
     dividend_yield_pct DECIMAL(10, 4),

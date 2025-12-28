@@ -1,5 +1,3 @@
-"use client";
-
 import React from "react";
 import Link from "next/link";
 import Image from "next/image";
@@ -12,9 +10,34 @@ import {
     BarChart2,
     ArrowRight,
     Calculator,
+    ArrowUpRight,
+    ArrowDownRight
 } from "lucide-react";
 
-export default function DashboardHub() {
+// Force dynamic rendering for fresh market data
+export const dynamic = 'force-dynamic';
+
+async function getMarketData() {
+    const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://127.0.0.1:5001/api';
+
+    try {
+        const res = await fetch(`${API_BASE}/database/stocks?limit=6&min_quality=50`, {
+            next: { revalidate: 60 }
+        });
+
+        if (!res.ok) return [];
+
+        const json = await res.json();
+        return json.status === 'success' ? json.data : [];
+    } catch (error) {
+        console.error("Dashboard fetch error:", error);
+        return [];
+    }
+}
+
+export default async function DashboardHub() {
+    const marketMovers = await getMarketData();
+
     const cards = [
         {
             title: "Portfolio Analysis",
@@ -79,7 +102,7 @@ export default function DashboardHub() {
                         </Typography>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-16">
                         {cards.map((card, idx) => (
                             <Link
                                 key={idx}
@@ -110,6 +133,37 @@ export default function DashboardHub() {
                             </Link>
                         ))}
                     </div>
+
+                    {/* New Market Snapshot Section */}
+                    {marketMovers.length > 0 && (
+                        <div className="animate-in fade-in slide-in-from-bottom-8 duration-700">
+                            <div className="flex items-center justify-between mb-6">
+                                <Typography variant="h3" className="text-xl font-bold">Market Snapshot (High Quality)</Typography>
+                                <Link href="/stocks" className="text-sm font-medium text-neutral-500 hover:text-black flex items-center gap-1">
+                                    View All <ArrowRight size={14} />
+                                </Link>
+                            </div>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+                                {marketMovers.map((stock: any) => (
+                                    <Link key={stock.nse_code} href={`/stock/${stock.nse_code}`} className="block group">
+                                        <div className="bg-white p-4 rounded-2xl border border-neutral-100 hover:shadow-md transition-all hover:border-black/10">
+                                            <div className="flex justify-between items-start mb-2">
+                                                <span className="text-xs font-bold text-neutral-400">{stock.nse_code}</span>
+                                                <div className={`flex items-center text-[10px] font-bold ${stock.day_change_pct >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
+                                                    {stock.day_change_pct >= 0 ? <ArrowUpRight size={12} /> : <ArrowDownRight size={12} />}
+                                                    {Math.abs(stock.day_change_pct).toFixed(2)}%
+                                                </div>
+                                            </div>
+                                            <div className="font-medium text-sm truncate mb-1 group-hover:text-amber-600 transition-colors">{stock.stock_name}</div>
+                                            <div className="text-lg font-bold">
+                                                ₹{Number(stock.current_price).toLocaleString()}
+                                            </div>
+                                        </div>
+                                    </Link>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </Container>
             </div>
         </div>

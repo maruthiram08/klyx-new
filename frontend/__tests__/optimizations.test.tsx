@@ -237,7 +237,7 @@ describe('Phase 5.6: Image Optimization', () => {
 
         if (fs.existsSync(headerPath)) {
             const content = fs.readFileSync(headerPath, 'utf8');
-            expect(content).toContain("from 'next/image'");
+            expect(content).toMatch(/from ['"]next\/image['"]/);
             expect(content).toContain('<Image');
         } else {
             expect(true).toBe(true);
