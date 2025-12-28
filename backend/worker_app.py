@@ -42,6 +42,7 @@ def root():
             "status": "running",
             "endpoints": {
                 "health": "/health",
+                "migrate": "/worker/migrate (POST)",
                 "enrich": "/worker/enrich (POST)",
                 "populate": "/worker/populate (POST)",
                 "refresh": "/worker/refresh (POST)",
@@ -49,6 +50,52 @@ def root():
             },
         }
     )
+
+
+@app.route("/worker/migrate", methods=["POST"])
+def run_migrations():
+    """
+    Run database migrations to add new columns
+    Safe to run multiple times (uses IF NOT EXISTS)
+    """
+    try:
+        from database.db_config import db_config
+        
+        migrations = [
+            "ALTER TABLE stocks ADD COLUMN IF NOT EXISTS durability_score INTEGER",
+            "ALTER TABLE stocks ADD COLUMN IF NOT EXISTS valuation_score INTEGER",
+            "ALTER TABLE stocks ADD COLUMN IF NOT EXISTS momentum_score INTEGER",
+            "ALTER TABLE stocks ADD COLUMN IF NOT EXISTS roce_annual_pct DECIMAL(10,2)",
+            "ALTER TABLE stocks ADD COLUMN IF NOT EXISTS earnings_yield_pct DECIMAL(10,2)",
+            "ALTER TABLE stocks ADD COLUMN IF NOT EXISTS rel_strength_score INTEGER",
+            "ALTER TABLE stocks ADD COLUMN IF NOT EXISTS target_price DECIMAL(10,2)",
+            "ALTER TABLE stocks ADD COLUMN IF NOT EXISTS recommendation_key VARCHAR(50)",
+            "ALTER TABLE stocks ADD COLUMN IF NOT EXISTS analyst_count INTEGER",
+        ]
+        
+        logger.info("Running database migrations...")
+        results = []
+        
+        for i, migration in enumerate(migrations, 1):
+            try:
+                db_config.execute_query(migration)
+                logger.info(f"✅ Migration {i}/{len(migrations)}: {migration[:60]}...")
+                results.append({"migration": i, "status": "success", "sql": migration[:60]})
+            except Exception as e:
+                logger.warning(f"⚠️  Migration {i} failed (may already exist): {e}")
+                results.append({"migration": i, "status": "skipped", "reason": str(e)[:100]})
+        
+        logger.info("✅ All migrations complete!")
+        
+        return jsonify({
+            "status": "success",
+            "message": "Database migrations completed",
+            "results": results
+        })
+        
+    except Exception as e:
+        logger.error(f"Migration failed: {str(e)}", exc_info=True)
+        return jsonify({"status": "error", "message": str(e)}), 500
 
 
 @app.route("/worker/enrich", methods=["POST"])
